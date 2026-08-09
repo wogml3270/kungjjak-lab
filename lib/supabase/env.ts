@@ -1,16 +1,14 @@
-function requirePublicEnv(name: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_ANON_KEY') {
-  const value = process.env[name];
+export function getSupabaseEnv() {
+  // Next.js replaces NEXT_PUBLIC_* only when accessed through static property names.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+  if (!url || !anonKey) {
+    throw new Error('Missing required Supabase public environment variables.');
   }
 
-  return value;
-}
-
-export function getSupabaseEnv() {
   return {
-    url: requirePublicEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    anonKey: requirePublicEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    url,
+    anonKey,
   };
 }

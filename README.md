@@ -23,8 +23,9 @@
 
 ### 1. 일반 MBTI 검사 (Solo Mode)
 
-- E/I, S/N, T/F, J/P 각 3문항, 총 12문항
-- 좌우 스와이프 또는 A/B 버튼으로 답변
+- E/I, S/N, T/F, J/P 각 13문항으로 구성된 52문항 풀에서 지표별 6개씩 총 24문항 출제
+- `매우 그렇다(+2)`부터 `매우 그렇지 않다(-2)`까지 5점 척도로 답변
+- 질문 화면에는 MBTI 지표나 점수 방향을 노출하지 않음
 - 성향별 퍼센티지 스펙트럼과 3D 아이콘 제공
 - 연인에게 보여 줄 행동 가이드와 공유용 결과 제공
 
@@ -39,9 +40,10 @@
 
 - 호스트가 방을 만들고 4자리 코드 또는 카카오톡 링크로 게스트 초대
 - 게스트 입장 및 준비 상태를 Supabase Realtime으로 동기화
-- 같은 상황에 각자 답하고 상대가 답했는지만 실시간 표시
+- 52문항 풀에서 선택된 동일한 24문항에 각자 5점 척도로 답변
+- 진행 중에는 상대가 답했는지만 표시하고 실제 점수는 양쪽 제출 후 공개
 - 양쪽 답변이 모두 도착하면 다음 문항으로 자동 전환
-- 최종 쿵짝 스코어와 갈등 방지 가이드 생성
+- 문항별 척도 차이를 바탕으로 최종 쿵짝 스코어와 갈등 방지 가이드 생성
 
 ## 핵심 사용자 흐름
 
@@ -62,11 +64,11 @@ sequenceDiagram
     DB-->>Host: GUEST_JOINED 이벤트
 
     loop Co-op 문항 반복
-        Host->>Web: A/B 선택
-        Web->>DB: CHOICE 이벤트 전송
+        Host->>Web: 5점 척도 선택
+        Web->>DB: 응답 저장 및 완료 이벤트 전송
         DB-->>Guest: 상대 선택 완료 표시
-        Guest->>Web: A/B 선택
-        Web->>DB: CHOICE 이벤트 전송
+        Guest->>Web: 5점 척도 선택
+        Web->>DB: 응답 저장 및 완료 이벤트 전송
         DB-->>Host: 양쪽 선택 완료 알림
         Web->>Web: 다음 문항으로 자동 전환
     end
@@ -99,7 +101,7 @@ stateDiagram-v2
 ### 포함
 
 - 랜딩 및 콘텐츠 선택
-- Solo 12문항 검사와 결과 리포트
+- Solo 24문항 5점 척도 검사와 결과 리포트
 - Co-op 방 생성, 4자리 코드, 초대 링크
 - 2인 입장 및 문항별 실시간 응답 동기화
 - 쿵짝 스코어와 기본 갈등 방지 가이드
@@ -128,10 +130,13 @@ stateDiagram-v2
 
 ### 확정된 Phase 1 규칙
 
-- Solo와 Co-op 모두 E/I, S/N, T/F, J/P 각 3개씩 총 12문항을 사용합니다.
-- 쿵짝 스코어는 `(두 사용자의 선택이 일치한 문항 수 / 12) × 100`으로 계산합니다.
+- 질문 풀은 E/I, S/N, T/F, J/P 각 13개씩 총 52문항입니다.
+- Solo와 Co-op 검사는 각 지표에서 양쪽 성향 문항을 3개씩 선택한 총 24문항을 사용합니다.
+- 응답값은 `매우 그렇다(+2)`, `그렇다(+1)`, `보통(0)`, `그렇지 않다(-1)`, `매우 그렇지 않다(-2)`입니다.
+- 쿵짝 스코어는 `100 × (1 - 두 사용자 응답 차이 절댓값의 합 / 96)`으로 계산합니다.
 - 로그인 화면 없이 Supabase Anonymous Auth로 비회원 세션을 만들고 `auth.uid()`를 권한 기준으로 사용합니다.
-- 진행 중에는 상대방의 선택 완료 여부만 전송합니다. 실제 A/B 선택은 양쪽 제출 완료 후에만 상대에게 공개합니다.
+- 진행 중에는 상대방의 선택 완료 여부만 전송합니다. 실제 `-2~+2` 점수는 양쪽 제출 완료 후에만 상대에게 공개합니다.
+- 질문 화면에는 `EI`, `SN`, `TF`, `JP` 등의 내부 지표 라벨을 표시하지 않습니다.
 - 연애 재판소와 UGC는 Phase 2 범위이며 Phase 1 랜딩에서는 Coming Soon으로만 노출합니다.
 
 ## 초기 데이터 모델
@@ -140,10 +145,9 @@ stateDiagram-v2
 | --- | --- | --- |
 | `rooms` | `id`, `code`, `mode`, `status`, `host_id`, `expires_at` | 2인 세션과 수명 주기 |
 | `participants` | `id`, `room_id`, `role`, `joined_at`, `ready_at` | 호스트·게스트 참여 정보 |
-| `questions` | `id`, `mode`, `dimension`, `prompt`, `position` | 모드별 문항 |
-| `choices` | `id`, `question_id`, `label`, `score` | A/B 선택지와 점수 규칙 |
-| `responses` | `room_id`, `participant_id`, `question_id`, `choice_id` | 중복 방지를 포함한 응답 원장 |
-| `reports` | `room_id`, `score`, `summary`, `guide`, `created_at` | 확정된 결과 스냅샷 |
+| `questions` | `id`, `position`, `dimension`, `title`, `positive_trait` | 두 모드가 공유하는 52문항 풀과 비노출 채점 메타데이터 |
+| `responses` | `room_id`, `participant_id`, `question_id`, `score_value` | -2~+2 응답과 중복 방지 원장 |
+| `reports` | `room_id`, `difference_sum`, `score`, `summary`, `guide` | 두 사람의 응답 차이와 결과 스냅샷 |
 
 실제 스키마에서는 익명 참여자 토큰, RLS 정책, 응답의 `(room_id, participant_id, question_id)` 유일성, 만료된 방 정리 정책이 필요합니다.
 
@@ -157,7 +161,7 @@ stateDiagram-v2
 | `QUESTION_COMPLETED` | 양쪽 응답 저장 완료 | `roomId`, `questionId`, `nextQuestionId` |
 | `REPORT_READY` | 서버가 리포트 확정 | `roomId`, `reportId` |
 
-상대방의 실제 선택값은 두 사람의 응답이 모두 확정되기 전까지 공개하지 않습니다. 모든 이벤트에는 방 권한 검증과 중복 전송에 안전한 처리가 필요합니다.
+상대방의 실제 점수값은 두 사람의 응답이 모두 확정되기 전까지 공개하지 않습니다. Broadcast에는 점수를 넣지 않고 완료 여부만 전달하며, 모든 이벤트에는 방 권한 검증과 중복 전송에 안전한 처리가 필요합니다.
 
 ## 디자인 원칙
 
@@ -168,6 +172,7 @@ stateDiagram-v2
 - 타이포그래피: LINE Seed KR
 - 그래픽: 성향과 결과를 표현하는 3D 오브젝트
 - UX: 엄지손가락 범위의 큰 선택 버튼, 한 화면 한 행동, 상태를 색상뿐 아니라 문구로도 안내
+- 검사 UI: 크기가 다른 5개 원형 버튼으로 응답 강도를 시각화하고 내부 MBTI 지표는 숨김
 
 ## 비기능 요구사항
 
@@ -189,10 +194,14 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 `SUPABASE_SERVICE_ROLE_KEY`는 서버 전용이며 브라우저 번들에 포함하면 안 됩니다. 실제 개발 시작 시 `.env.example`을 추가하고 비밀값은 커밋하지 않습니다.
 
+### Supabase Auth 설정
+
+Supabase Dashboard의 **Authentication → Providers → Anonymous Sign-Ins**를 활성화해야 합니다. 익명 사용자는 로그인 화면 없이 생성되지만 `authenticated` 역할과 `auth.uid()`를 사용하므로 RLS 정책을 안전하게 적용할 수 있습니다.
+
 ## 구현 로드맵
 
 1. Next.js 프로젝트와 디자인 토큰 구성
-2. 문항·선택지 스키마 및 Solo 검사 구현
+2. 52문항 풀·5점 척도 스키마 및 24문항 Solo 검사 구현
 3. Supabase 로컬/개발 환경, RLS, 방 생성 API 구현
 4. Co-op 대기실과 Realtime 상태 머신 구현
 5. 응답 저장, 점수 계산, 결과 리포트 구현

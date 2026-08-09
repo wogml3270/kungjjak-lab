@@ -1,11 +1,69 @@
+import { ServiceCard } from '@/components/home/service-card';
+
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
-      <section className="w-full rounded-3xl border-3 border-black bg-brand-pink p-6 shadow-neo-lg">
-        <p className="text-sm font-bold">KUNGJJAK LAB</p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight">우리의 쿵짝을 실험해 봐!</h1>
-        <p className="mt-4 font-medium">Phase 1 프로젝트 기본 설정이 완료되었습니다.</p>
+    <main className="mx-auto min-h-screen max-w-md px-5 pb-12 pt-8">
+      <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
+        <span className="absolute -right-3 -top-5 rotate-12 text-7xl" aria-hidden>
+          🧪
+        </span>
+        <p className="relative text-sm font-black tracking-[0.18em]">KUNGJJAK LAB</p>
+        <h1 className="relative mt-3 max-w-[270px] text-4xl font-black leading-tight tracking-[-0.04em]">
+          우리 둘의 쿵짝,
+          <br />몇 점일까?
+        </h1>
+        <p className="relative mt-4 max-w-[290px] text-sm font-bold leading-6">
+          혼자 성향을 발견하고, 연인과 같은 질문에 답하며 서로를 더 알아가요.
+        </p>
+      </header>
+
+      <section aria-labelledby="services-title" className="mt-9 space-y-6">
+        <div className="flex items-end justify-between px-1">
+          <div>
+            <p className="text-xs font-black text-neutral-600">TODAY'S EXPERIMENT</p>
+            <h2 className="mt-1 text-2xl font-black" id="services-title">
+              어떤 실험을 해볼까요?
+            </h2>
+          </div>
+          <span aria-hidden className="text-3xl">✨</span>
+        </div>
+
+        <ServiceCard
+          badge="Solo"
+          description="24개의 짧은 질문으로 나의 연애 MBTI와 행동 가이드를 확인해요."
+          emoji="🔬"
+          href="/solo"
+          label="Solo MBTI 검사 시작하기 →"
+          theme="pink"
+          title="나부터 탐구하기"
+        />
+        <ServiceCard
+          badge="둘이서 실시간"
+          description="방을 만들고 연인을 초대해 두 사람의 쿵짝 스코어를 측정해요."
+          emoji="🧬"
+          href="/co-op"
+          label="2인 멀티버스 방 만들기 →"
+          theme="blue"
+          title="우리 쿵짝 실험하기"
+        />
+        <ServiceCard
+          badge="PHASE 2"
+          description="커플 갈등을 유쾌한 판결문으로 풀어보는 연애 재판소를 준비 중이에요."
+          emoji="⚖️"
+          label="연애 재판소 · 오픈 예정"
+          theme="mint"
+          title="사랑의 판결 받기"
+        />
       </section>
+
+      <footer className="mt-10 border-t-2 border-black/20 px-2 pt-6 text-center text-xs font-bold text-neutral-600">
+        <p>쿵짝랩 · 혼자서도, 둘이서도 착착 맞는 성향 탐구소</p>
+        <p className="mt-3 text-black">Made by 박재희</p>
+        <nav aria-label="개발자 링크" className="mt-2 flex justify-center gap-4">
+          <a className="underline underline-offset-4" href="https://github.com/wogml3270/kungjjak-lab" rel="noreferrer" target="_blank">GitHub</a>
+          <a className="underline underline-offset-4" href="https://j-fe-blog.vercel.app/" rel="noreferrer" target="_blank">Blog</a>
+        </nav>
+      </footer>
     </main>
   );
 }

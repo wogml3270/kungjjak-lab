@@ -31,11 +31,6 @@ do $$ begin
 exception when duplicate_object then null;
 end $$;
 
-do $$ begin
-  create type public.choice_label as enum ('A', 'B');
-exception when duplicate_object then null;
-end $$;
-
 create or replace function public.generate_room_code()
 returns text
 language sql
@@ -53,7 +48,7 @@ create table if not exists public.rooms (
   mode public.room_mode not null,
   status public.room_status not null default 'created',
   host_user_id uuid not null references auth.users(id) on delete cascade,
-  current_question integer not null default 1 check (current_question between 1 and 12),
+  current_question integer not null default 1 check (current_question between 1 and 24),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   expires_at timestamptz not null default now() + interval '24 hours',
@@ -75,19 +70,20 @@ create table if not exists public.participants (
 
 create table if not exists public.questions (
   id uuid primary key default gen_random_uuid(),
-  mode public.room_mode not null,
-  position smallint not null check (position between 1 and 12),
+  position smallint not null check (position between 1 and 52),
   dimension public.mbti_dimension not null,
-  prompt text not null,
-  option_a text not null,
-  option_a_trait char(1) not null,
-  option_b text not null,
-  option_b_trait char(1) not null,
+  title text not null,
+  positive_trait char(1) not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  constraint questions_mode_position_unique unique (mode, position),
-  constraint questions_a_trait_valid check (option_a_trait in ('E','I','S','N','T','F','J','P')),
-  constraint questions_b_trait_valid check (option_b_trait in ('E','I','S','N','T','F','J','P'))
+  constraint questions_position_unique unique (position),
+  constraint questions_positive_trait_valid check (positive_trait in ('E','I','S','N','T','F','J','P')),
+  constraint questions_trait_matches_dimension check (
+    (dimension = 'EI' and positive_trait in ('E', 'I'))
+    or (dimension = 'SN' and positive_trait in ('S', 'N'))
+    or (dimension = 'TF' and positive_trait in ('T', 'F'))
+    or (dimension = 'JP' and positive_trait in ('J', 'P'))
+  )
 );
 
 create table if not exists public.responses (
@@ -95,7 +91,7 @@ create table if not exists public.responses (
   room_id uuid not null references public.rooms(id) on delete cascade,
   participant_id uuid not null references public.participants(id) on delete cascade,
   question_id uuid not null references public.questions(id) on delete restrict,
-  choice public.choice_label not null,
+  score_value smallint not null check (score_value between -2 and 2),
   submitted_at timestamptz not null default now(),
   constraint responses_once_per_question unique (room_id, participant_id, question_id)
 );
@@ -103,9 +99,9 @@ create table if not exists public.responses (
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null unique references public.rooms(id) on delete cascade,
-  match_count smallint not null check (match_count between 0 and 12),
+  difference_sum smallint not null check (difference_sum between 0 and 96),
   score numeric(5,2) generated always as
-    (round((match_count::numeric / 12::numeric) * 100, 2)) stored,
+    (round((1 - difference_sum::numeric / 96::numeric) * 100, 2)) stored,
   summary text not null,
   guide jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
@@ -271,14 +267,10 @@ with check (
       and p.room_id = responses.room_id
       and p.user_id = auth.uid()
   )
-  and exists (
-    select 1 from public.rooms r
-    join public.questions q on q.id = question_id
-    where r.id = room_id and r.mode = q.mode
-  )
+  and exists (select 1 from public.questions q where q.id = question_id and q.is_active)
 );
 
--- Own answer is recoverable. A partner's choice becomes readable only after both submit.
+-- Own answer is recoverable. A partner's score becomes readable only after both submit.
 create policy "responses_read_after_reveal"
 on public.responses for select to authenticated
 using (
@@ -303,7 +295,7 @@ grant select on public.questions to authenticated;
 grant select, insert on public.responses to authenticated;
 grant select on public.reports to authenticated;
 
--- Realtime payloads must never include A/B before both submissions. The app broadcasts
+-- Realtime payloads must never include score_value before both submissions. The app broadcasts
 -- only { roomId, questionId, participantId, completed: true } on private room channels.
 alter table public.rooms replica identity full;
 alter table public.participants replica identity full;
