@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor UserA as 호스트 (User A)
+    actor UserB as 게스트 (User B)
+    participant Front as 쿵짝랩 Next.js 클라이언트
+    participant Supa as Supabase Realtime DB
+
+    UserA->>Front: [방 생성] 클릭
+    Front->>Supa: Room Record 생성 (code: "KJLAB")
+    Supa-->>Front: Room ID 반환
+    UserA->>UserB: 카카오톡 초대 링크 전송
+    
+    UserB->>Front: 링크 접속
+    Front->>Supa: Guest ID 등록 & Realtime 채널 연결
+    Supa-->>UserA: Event ('GUEST_JOINED') -> 대기실 연동
+    
+    loop 1~10번 문항 진행
+        UserA->>Front: 선택지 A 클릭
+        Front->>Supa: Broadcast ('CHOICE', { user: A, choice: 'A' })
+        Supa-->>UserB: Realtime Event -> "상대방 선택 완료!" 표시
+        
+        UserB->>Front: 선택지 B 클릭
+        Front->>Supa: Broadcast ('CHOICE', { user: B, choice: 'B' })
+        Supa-->>UserA: Realtime Event -> 양쪽 선택 완료 감지
+        
+        Front->>Front: 다음 문항으로 자동 스와이프 애니메이션
+    end
+
+    Front->>Supa: 최종 응답 DB 저장
+    Supa-->>Front: 시너지 리포트 계산 및 반환
+    Front-->>UserA: [쿵짝랩 커플 리포트] 출력
+    Front-->>UserB: [쿵짝랩 커플 리포트] 출력
