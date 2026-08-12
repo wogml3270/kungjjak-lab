@@ -8,10 +8,18 @@ import { createClient } from '@/lib/supabase/client';
 
 type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
 type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean };
-type Question = { id: string; position: number; title: string; positive_trait: string };
+type Dimension = 'EI' | 'SN' | 'TF' | 'JP';
+type Question = { id: string; position: number; title: string; positive_trait: string; dimension: Dimension };
 type Response = { participant_id: string; question_id: string; score_value: number };
 
 const TEST_LENGTH = 24;
+
+const axisDefinitions = [
+  { dimension: 'EI', left: '외향적', leftTrait: 'E', right: '내향적', rightTrait: 'I' },
+  { dimension: 'SN', left: '현실적', leftTrait: 'S', right: '직관적', rightTrait: 'N' },
+  { dimension: 'TF', left: '논리적', leftTrait: 'T', right: '감정적', rightTrait: 'F' },
+  { dimension: 'JP', left: '계획적', leftTrait: 'J', right: '유연한', rightTrait: 'P' },
+] as const;
 
 function seededRandom(seedText: string) {
   let seed = [...seedText].reduce((value, character) => ((value * 31) + character.charCodeAt(0)) >>> 0, 2166136261);
@@ -63,7 +71,7 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
     async function loadQuestions() {
       const { data, error: questionError } = await supabase
         .from('questions')
-        .select('id, position, title, positive_trait')
+        .select('id, position, title, positive_trait, dimension')
         .eq('is_active', true)
         .order('position');
       if (questionError || !data) {
@@ -149,18 +157,30 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
   if (room.status === 'completed') {
     const byQuestion = new Map<string, number[]>();
     responses.forEach((response) => byQuestion.set(response.question_id, [...(byQuestion.get(response.question_id) ?? []), response.score_value]));
-    const difference = [...byQuestion.values()].reduce((sum, values) => sum + (values.length === 2 ? Math.abs(values[0] - values[1]) : 0), 0);
-    const score = Math.round((1 - difference / 96) * 100);
-    const completedPairs = [...byQuestion.values()].filter((values) => values.length === 2);
+    const questionById = new Map(questions.map((item) => [item.id, item]));
+    const axisResults = axisDefinitions.map((axis) => {
+      const axisPairs = [...byQuestion.entries()].filter(([questionId, values]) => questionById.get(questionId)?.dimension === axis.dimension && values.length === 2);
+      const difference = axisPairs.reduce((sum, [, values]) => sum + Math.abs(values[0] - values[1]), 0);
+      const chemistry = Math.round((1 - difference / 24) * 100);
+      const tendencyScore = axisPairs.reduce((sum, [questionId, values]) => {
+        const direction = questionById.get(questionId)?.positive_trait === axis.leftTrait ? 1 : -1;
+        return sum + (values[0] + values[1]) * direction;
+      }, 0);
+      const leftPercent = Math.round(((tendencyScore + 24) / 48) * 100);
+      return { ...axis, chemistry, leftPercent, rightPercent: 100 - leftPercent };
+    });
+    const score = Math.round(axisResults.reduce((sum, axis) => sum + axis.chemistry, 0) / axisResults.length);
+    const completedEntries = [...byQuestion.entries()].filter(([, values]) => values.length === 2);
+    const completedPairs = completedEntries.map(([, values]) => values);
     const exactMatches = completedPairs.filter(([first, second]) => first === second).length;
     const closeMatches = completedPairs.filter(([first, second]) => Math.abs(first - second) <= 1).length;
     const strongMatches = completedPairs.filter(([first, second]) => Math.abs(first) === 2 && first === second).length;
-    const biggestGap = completedPairs.reduce((largest, values, index) => {
+    const biggestGap = completedEntries.reduce((largest, [questionId, values]) => {
       const gap = Math.abs(values[0] - values[1]);
-      return gap > largest.gap ? { gap, index } : largest;
-    }, { gap: -1, index: 0 });
+      return gap > largest.gap ? { gap, questionId } : largest;
+    }, { gap: -1, questionId: '' });
     const summary = score >= 85 ? '말하지 않아도 통하는 텔레파시형' : score >= 70 ? '닮음과 다름이 균형 잡힌 단짝형' : score >= 50 ? '차이를 발견할수록 재밌는 탐험형' : '대화할수록 가까워지는 반전형';
-    const gapQuestion = questions[biggestGap.index]?.title;
+    const gapQuestion = questionById.get(biggestGap.questionId)?.title;
     return (
       <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
         <motion.section animate={{ opacity: 1, scale: 1 }} className="w-full min-w-0 rounded-3xl border-3 border-black bg-brand-mint p-5 text-center shadow-neo-lg sm:p-7" initial={{ opacity: 0, scale: 0.9 }}>
@@ -174,6 +194,28 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
               <ResultStat label="완전 일치" value={`${exactMatches}개`} color="bg-brand-yellow" />
               <ResultStat label="비슷한 답" value={`${closeMatches}개`} color="bg-brand-blue" />
               <ResultStat label="강한 공감" value={`${strongMatches}개`} color="bg-brand-pink" />
+            </div>
+          ) : null}
+          {responses.length === 48 ? (
+            <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 text-left">
+              <h2 className="font-black">우리의 심리 밸런스</h2>
+              <p className="mt-1 text-xs font-semibold text-neutral-600">두 사람의 답변 강도를 합쳐 네 가지 성향 축으로 분석했어요.</p>
+              <div className="mt-5 space-y-5">
+                {axisResults.map((axis) => (
+                  <div key={axis.dimension}>
+                    <div className="flex justify-between gap-2 text-xs font-black">
+                      <span>{axis.left}({axis.leftTrait}) {axis.leftPercent}%</span>
+                      <span>{axis.rightPercent}% {axis.right}({axis.rightTrait})</span>
+                    </div>
+                    <div className="mt-2 flex h-4 overflow-hidden rounded-full border-2 border-black">
+                      <div className="bg-brand-pink" style={{ width: `${axis.leftPercent}%` }} />
+                      <div className="bg-brand-blue" style={{ width: `${axis.rightPercent}%` }} />
+                    </div>
+                    <p className="mt-1 text-right text-[10px] font-black text-neutral-600">이 축의 쿵짝 {axis.chemistry}%</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-5 border-t-2 border-black pt-3 text-xs font-bold leading-5">최종 쿵짝 스코어는 네 가지 축별 쿵짝 점수의 평균이에요.</p>
             </div>
           ) : null}
           {responses.length === 48 && gapQuestion ? (

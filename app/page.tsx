@@ -71,6 +71,8 @@ export default async function HomePage() {
         <nav aria-label="개발자 링크" className="mt-2 flex justify-center gap-4">
           <a className="underline underline-offset-4" href="https://github.com/wogml3270/kungjjak-lab" rel="noreferrer" target="_blank">GitHub</a>
           <a className="underline underline-offset-4" href="https://j-fe-blog.vercel.app/" rel="noreferrer" target="_blank">Blog</a>
+          <a className="underline underline-offset-4" href="mailto:wogml3270@gmail.com" rel="noreferrer" target="_blank">Email</a>
+          <a className="underline underline-offset-4" href="https://wogml3270.notion.site/cf22a7bca5ec45a7815997c128d2e0ec" rel="noreferrer" target="_blank">Notion</a>
         </nav>
       </footer>
     </main>
