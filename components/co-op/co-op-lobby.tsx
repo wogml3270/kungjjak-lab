@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -33,6 +33,8 @@ export function CoOpLobby({ code }: { code: string }) {
   const [error, setError] = useState('');
   const [displayName, setDisplayName] = useState<string | null>();
   const [suggestedName, setSuggestedName] = useState('');
+  const roomWasFullRef = useRef(false);
+  const presenceClosureStartedRef = useRef(false);
 
   useEffect(() => {
     setSuggestedName(window.localStorage.getItem('kungjjak_co_op_name') ?? '');
@@ -126,6 +128,52 @@ export function CoOpLobby({ code }: { code: string }) {
     return () => { supabase.removeChannel(roomChannel); };
   }, [room?.id, supabase]);
 
+  useEffect(() => {
+    if (!room || !userId || room.status === 'completed' || room.status === 'expired') return;
+    const activeRoomId = room.id;
+    let disconnectTimer: number | undefined;
+    const presenceChannel = supabase.channel(`room:${activeRoomId}:presence`, {
+      config: { presence: { key: userId } },
+    });
+
+    function checkPresence() {
+      const connectedUsers = Object.keys(presenceChannel.presenceState()).length;
+      if (connectedUsers >= 2) {
+        roomWasFullRef.current = true;
+        presenceClosureStartedRef.current = false;
+        if (disconnectTimer) window.clearTimeout(disconnectTimer);
+        return;
+      }
+
+      if (!roomWasFullRef.current || presenceClosureStartedRef.current) return;
+      if (disconnectTimer) window.clearTimeout(disconnectTimer);
+      disconnectTimer = window.setTimeout(async () => {
+        if (Object.keys(presenceChannel.presenceState()).length >= 2 || presenceClosureStartedRef.current) return;
+        presenceClosureStartedRef.current = true;
+        const { error: closeError } = await supabase.rpc('leave_co_op_room', { target_room_id: activeRoomId });
+        if (closeError) presenceClosureStartedRef.current = false;
+        else {
+          setRoom(null);
+          setParticipants([]);
+          setError('상대방의 연결이 끊겨서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.');
+        }
+      }, 5000);
+    }
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, checkPresence)
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({ participantId: userId, connectedAt: new Date().toISOString() });
+        }
+      });
+
+    return () => {
+      if (disconnectTimer) window.clearTimeout(disconnectTimer);
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [room?.id, room?.status, supabase, userId]);
+
   const inviteUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/co-op/${code}`;
   const isHost = room?.host_user_id === userId;
   const isFull = participants.length === 2;
@@ -207,10 +255,7 @@ export function CoOpLobby({ code }: { code: string }) {
         {error ? (
           <div className="mt-6 rounded-2xl border-3 border-black bg-brand-pink p-4">
             <p className="font-black" role="alert">{error}</p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button className="neo-button bg-brand-yellow" onClick={() => window.location.reload()} type="button">다시 입장하기</button>
-              <Link className="neo-button inline-flex items-center bg-white" href="/co-op">다른 방 찾기</Link>
-            </div>
+            <Link className="neo-button mt-4 inline-flex items-center bg-white" href="/co-op">다른 방 찾기</Link>
           </div>
         ) : (
           <>
@@ -250,7 +295,7 @@ export function CoOpLobby({ code }: { code: string }) {
           </>
         )}
 
-        {room ? <button className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" onClick={leaveRoom} type="button">← 대기실 나가기</button> : <Link className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" href="/co-op">← 다른 방 찾기</Link>}
+        {room && !error ? <button className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" onClick={leaveRoom} type="button">← 대기실 나가기</button> : null}
       </motion.section>
     </main>
   );

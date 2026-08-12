@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { SignOutButton } from '@/components/auth/sign-out-button';
+import { MyPageTabs } from '@/components/mypage/mypage-tabs';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function MyPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
@@ -14,12 +15,9 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     ? await supabase.from('solo_results').select('id, mbti, confidence, axis_scores, completed_at').order('completed_at', { ascending: false })
     : { data: null };
   const { data: memberships } = tab === 'co-op'
-    ? await supabase.from('participants').select('room_id, role, joined_at').eq('user_id', user.id).order('joined_at', { ascending: false })
+    ? await supabase.from('participants').select('room_id, role, joined_at, rooms(id, code, status, created_at, reports(score))').eq('user_id', user.id).order('joined_at', { ascending: false })
     : { data: null };
-  const roomIds = memberships?.map((item) => item.room_id) ?? [];
-  const { data: coOpRooms } = roomIds.length
-    ? await supabase.from('rooms').select('id, code, status, created_at, reports(score)').in('id', roomIds)
-    : { data: [] };
+  const coOpRooms = memberships?.flatMap((item) => item.rooms ?? []) ?? [];
   const name = user.user_metadata.full_name ?? user.user_metadata.name ?? user.user_metadata.preferred_username ?? '쿵짝 연구원';
 
   return (
@@ -28,11 +26,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
       <section className="mt-6 rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <p className="text-xs font-black tracking-widest">MY LAB</p><h1 className="mt-2 text-3xl font-black">{name}님의 연구 기록</h1>
       </section>
-      <nav aria-label="마이페이지 메뉴" className="mt-7 grid grid-cols-3 gap-2 text-sm">
-        <Link className={`neo-button flex items-center justify-center ${tab === 'profile' ? 'bg-brand-pink' : 'bg-white'}`} href="/mypage?tab=profile">내 정보</Link>
-        <Link className={`neo-button flex items-center justify-center ${tab === 'solo' ? 'bg-brand-blue' : 'bg-white'}`} href="/mypage?tab=solo">Solo 기록</Link>
-        <Link className={`neo-button flex items-center justify-center text-center ${tab === 'co-op' ? 'bg-brand-mint' : 'bg-white'}`} href="/mypage?tab=co-op">2인 기록</Link>
-      </nav>
+      <MyPageTabs activeTab={tab} />
       {tab === 'profile' ? (
         <section className="mt-6 rounded-3xl border-3 border-black bg-white p-6 shadow-neo">
           <h2 className="text-xl font-black">내 정보</h2>
