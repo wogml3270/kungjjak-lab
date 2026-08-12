@@ -14,6 +14,7 @@ import {
 } from '@/lib/solo/progress';
 import { ensureAnonymousSession } from '@/lib/supabase/anonymous';
 import { createClient } from '@/lib/supabase/client';
+import { saveLocalSoloResult } from '@/lib/solo/result';
 
 type Trait = 'E' | 'I' | 'S' | 'N' | 'T' | 'F' | 'J' | 'P';
 type Dimension = 'EI' | 'SN' | 'TF' | 'JP';
@@ -193,8 +194,12 @@ export function SoloQuiz() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
+      const resultId = window.crypto.randomUUID();
+      const completedAt = new Date().toISOString();
+      saveLocalSoloResult({ id: resultId, mbti: finalResult.mbti, clarity: finalResult.confidence, axisScores: finalResult.axisScores, answers, completedAt });
       if (user && !user.is_anonymous) {
         await supabase.from('solo_results').insert({
+          id: resultId,
           user_id: user.id,
           mbti: finalResult.mbti,
           confidence: finalResult.confidence,
@@ -204,11 +209,11 @@ export function SoloQuiz() {
       }
 
       clearSoloProgress();
-      setStatus('completed');
+      router.replace(`/solo/result/${resultId}`);
     }, 2200);
 
     return () => window.clearTimeout(finishAnalysis);
-  }, [answers, status]);
+  }, [answers, router, status]);
 
   const result = useMemo(() => calculateResult(answers), [answers]);
   const question = questions[currentIndex];

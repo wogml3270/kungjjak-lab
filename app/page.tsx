@@ -9,7 +9,7 @@ export default async function HomePage() {
   const signedIn = Boolean(user && !user.is_anonymous);
   return (
     <main className="mx-auto min-h-screen max-w-md px-5 pb-12 pt-8">
-      <nav className="mb-5 flex justify-end"><Link className="rounded-full border-2 border-black bg-white px-4 py-2 text-sm font-black shadow-neo" href={signedIn ? '/mypage' : '/login'}>{signedIn ? '마이페이지' : '로그인'}</Link></nav>
+      <nav className="mb-5 flex justify-end"><Link aria-label={signedIn ? '마이페이지' : '로그인'} className="flex size-11 items-center justify-center rounded-full border-2 border-black bg-white shadow-neo" href={signedIn ? '/mypage' : '/login'} title={signedIn ? '마이페이지' : '로그인'}><svg aria-hidden="true" className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.1a7.5 7.5 0 0 1 15 0A17.9 17.9 0 0 1 12 21.75a17.9 17.9 0 0 1-7.5-1.65Z" /></svg></Link></nav>
       <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <span className="absolute -right-3 -top-5 rotate-12 text-7xl" aria-hidden>
           🧪

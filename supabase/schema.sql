@@ -291,6 +291,19 @@ begin
         status = case when target_question_number >= 24 then 'completed'::public.room_status else status end
     where id = target_room_id
     returning * into result_room;
+
+    if target_question_number >= 24 then
+      insert into public.reports (room_id, difference_sum, summary)
+      select target_room_id,
+        sum(abs(pair.min_score - pair.max_score))::smallint,
+        '24문항 쿵짝 실험 완료'
+      from (
+        select r.question_id, min(r.score_value) as min_score, max(r.score_value) as max_score
+        from public.responses r where r.room_id = target_room_id
+        group by r.question_id having count(*) = 2
+      ) pair
+      on conflict (room_id) do update set difference_sum = excluded.difference_sum, summary = excluded.summary;
+    end if;
   else
     result_room := locked_room;
   end if;
