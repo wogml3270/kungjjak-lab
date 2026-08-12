@@ -45,6 +45,7 @@ export function CoOpEntry() {
       });
 
       if (participantError) throw participantError;
+      window.sessionStorage.setItem(`kungjjak_co_op_name:${room.code}`, nickname);
       router.push(`/co-op/${room.code}`);
     } catch (cause) {
       console.error('[co-op] room creation failed', cause);
@@ -61,6 +62,7 @@ export function CoOpEntry() {
     }
     if (!displayName.trim()) { setError('실험에서 사용할 이름을 입력해 주세요.'); return; }
     window.localStorage.setItem('kungjjak_co_op_name', displayName.trim());
+    window.sessionStorage.setItem(`kungjjak_co_op_name:${roomCode}`, displayName.trim());
     router.push(`/co-op/${roomCode}`);
   }
 

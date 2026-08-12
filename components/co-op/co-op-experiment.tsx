@@ -43,7 +43,7 @@ function selectQuestions(bank: Question[], code: string) {
   return shuffle(traits.flatMap((trait) => shuffle(bank.filter((question) => question.positive_trait === trait)).slice(0, 3)));
 }
 
-export function CoOpExperiment({ participant, participants, room: initialRoom }: { participant: Participant; participants: Participant[]; room: Room }) {
+export function CoOpExperiment({ onLeave, participant, participants, room: initialRoom }: { onLeave: () => void; participant: Participant; participants: Participant[]; room: Room }) {
   const supabase = useMemo(() => createClient(), []);
   const [room, setRoom] = useState(initialRoom);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -238,7 +238,7 @@ export function CoOpExperiment({ participant, participants, room: initialRoom }:
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-8">
       <section className="w-full">
-        <div className="flex justify-between text-sm font-black"><span>둘이 함께 답하는 중</span><span>{room.current_question} / {TEST_LENGTH}</span></div>
+        <div className="flex items-center justify-between text-sm font-black"><span>둘이 함께 답하는 중</span><div className="flex items-center gap-3"><span>{room.current_question} / {TEST_LENGTH}</span><button aria-label="검사 나가기" className="flex size-8 items-center justify-center rounded-full border-2 border-black bg-white text-lg shadow-[2px_2px_0_#000]" onClick={onLeave} type="button">×</button></div></div>
         <div className="mt-3 h-4 overflow-hidden rounded-full border-3 border-black bg-white"><motion.div animate={{ width: `${room.current_question / TEST_LENGTH * 100}%` }} className="h-full bg-brand-blue" /></div>
         <AnimatePresence mode="wait">
           <motion.article key={question.id} animate={{ opacity: 1, x: 0 }} className="mt-7 min-w-0 overflow-hidden rounded-3xl border-3 border-black bg-white p-4 shadow-neo-lg min-[380px]:p-6" exit={{ opacity: 0, x: -30 }} initial={{ opacity: 0, x: 30 }}>

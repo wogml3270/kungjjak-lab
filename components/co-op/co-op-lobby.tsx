@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CoOpExperiment } from '@/components/co-op/co-op-experiment';
 import { ensureAnonymousSession } from '@/lib/supabase/anonymous';
 import { createClient } from '@/lib/supabase/client';
@@ -23,15 +24,20 @@ function roomEntryMessage(cause: unknown) {
 }
 
 export function CoOpLobby({ code }: { code: string }) {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [userId, setUserId] = useState('');
   const [message, setMessage] = useState('초대장을 확인하고 있어요…');
   const [error, setError] = useState('');
-  const [displayName, setDisplayName] = useState<string>();
+  const [displayName, setDisplayName] = useState<string | null>();
+  const [suggestedName, setSuggestedName] = useState('');
 
-  useEffect(() => { setDisplayName(window.localStorage.getItem('kungjjak_co_op_name') ?? ''); }, []);
+  useEffect(() => {
+    setSuggestedName(window.localStorage.getItem('kungjjak_co_op_name') ?? '');
+    setDisplayName(window.sessionStorage.getItem(`kungjjak_co_op_name:${code}`));
+  }, [code]);
 
   const loadParticipants = useCallback(async (roomId: string) => {
     const { data, error: participantError } = await supabase
@@ -111,6 +117,11 @@ export function CoOpLobby({ code }: { code: string }) {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` }, (payload) => {
         setRoom(payload.new as Room);
       })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` }, () => {
+        setRoom(null);
+        setParticipants([]);
+        setError('상대방이 나가서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.');
+      })
       .subscribe();
     return () => { supabase.removeChannel(roomChannel); };
   }, [room?.id, supabase]);
@@ -160,17 +171,27 @@ export function CoOpLobby({ code }: { code: string }) {
 
   async function startExperiment() {
     if (!room || !isHost || !isFull) return;
-    const { error: startError } = await supabase.from('rooms').update({ status: 'in_progress', current_question: 1 }).eq('id', room.id);
-    if (startError) setMessage('실험을 시작하지 못했어요. 다시 시도해 주세요.');
-    else setRoom({ ...room, status: 'in_progress', current_question: 1 });
+    const { data, error: startError } = await supabase.rpc('start_co_op_room', { target_room_id: room.id });
+    if (startError) {
+      await loadParticipants(room.id).catch(() => setParticipants([]));
+      setMessage('두 사람이 모두 방에 있어야 시작할 수 있어요.');
+    } else if (data) setRoom((Array.isArray(data) ? data[0] : data) as Room);
+  }
+
+  async function leaveRoom() {
+    if (!room || !window.confirm('방을 나가면 두 사람의 진행 중인 방이 종료돼요. 나갈까요?')) return;
+    await supabase.rpc('leave_co_op_room', { target_room_id: room.id });
+    window.sessionStorage.removeItem(`kungjjak_co_op_name:${code}`);
+    router.replace('/co-op');
   }
 
   if (room && ['in_progress', 'calculating', 'completed'].includes(room.status)) {
     const me = participants.find((participant) => participant.user_id === userId);
-    if (me) return <CoOpExperiment participant={me} participants={participants} room={room} />;
+    if (me) return <CoOpExperiment onLeave={leaveRoom} participant={me} participants={participants} room={room} />;
   }
 
-  if (displayName === '') return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><form className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const name = String(form.get('name') ?? '').trim(); if (name) { window.localStorage.setItem('kungjjak_co_op_name', name); setDisplayName(name); } }}><p className="text-xs font-black tracking-widest">INVITATION</p><h1 className="mt-2 text-2xl font-black">어떤 이름으로 참여할까요?</h1><input autoFocus className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" maxLength={20} name="name" placeholder="예: 재희" required /><button className="neo-button mt-4 w-full bg-brand-mint" type="submit">이 이름으로 입장하기</button></form></main>;
+  if (displayName === null) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><form className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const name = String(form.get('name') ?? '').trim(); if (name) { window.localStorage.setItem('kungjjak_co_op_name', name); window.sessionStorage.setItem(`kungjjak_co_op_name:${code}`, name); setDisplayName(name); } }}><p className="text-xs font-black tracking-widest">INVITATION</p><h1 className="mt-2 text-2xl font-black">이번에는 어떤 이름으로 참여할까요?</h1><p className="mt-2 text-sm font-semibold">최근 사용한 이름을 추천해 드렸어요. 자유롭게 바꿀 수 있어요.</p><input autoFocus className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" defaultValue={suggestedName} maxLength={20} name="name" placeholder="예: 재희" required /><button className="neo-button mt-4 w-full bg-brand-mint" type="submit">이 이름으로 입장하기</button></form></main>;
+  if (displayName === undefined) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><p className="font-black">초대장을 확인하고 있어요…</p></main>;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
@@ -229,7 +250,7 @@ export function CoOpLobby({ code }: { code: string }) {
           </>
         )}
 
-        <Link className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" href="/co-op">← 대기실 나가기</Link>
+        {room ? <button className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" onClick={leaveRoom} type="button">← 대기실 나가기</button> : <Link className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" href="/co-op">← 다른 방 찾기</Link>}
       </motion.section>
     </main>
   );
