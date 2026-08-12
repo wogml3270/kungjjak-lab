@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { readSoloProgress } from '@/lib/solo/progress';
+import { clearSoloProgress, readSoloProgress } from '@/lib/solo/progress';
 
 export function SoloResumeCard() {
   const [currentQuestion, setCurrentQuestion] = useState<number>();
@@ -11,7 +11,7 @@ export function SoloResumeCard() {
   useEffect(() => {
     const syncProgress = () => {
       const progress = readSoloProgress();
-      setCurrentQuestion(progress ? progress.currentIndex + 1 : undefined);
+      setCurrentQuestion(progress && progress.currentIndex >= 1 ? progress.currentIndex + 1 : undefined);
     };
 
     syncProgress();
@@ -28,10 +28,18 @@ export function SoloResumeCard() {
   return (
     <motion.aside
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="mt-7 rounded-3xl border-3 border-black bg-brand-mint p-5 shadow-neo-lg"
+      className="relative mt-7 rounded-3xl border-3 border-black bg-brand-mint p-5 shadow-neo-lg"
       initial={{ opacity: 0, scale: 0.96, y: -12 }}
     >
-      <div className="flex items-center justify-between gap-3">
+      <button
+        aria-label="진행 중인 검사 삭제"
+        className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 border-black bg-white text-lg font-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+        onClick={() => { clearSoloProgress(); setCurrentQuestion(undefined); }}
+        type="button"
+      >
+        ×
+      </button>
+      <div className="flex items-center justify-between gap-3 pr-8">
         <div>
           <p className="text-xs font-black tracking-widest">진행 중인 검사</p>
           <h2 className="mt-1 text-xl font-black">{currentQuestion}번째 질문부터 이어갈까요?</h2>

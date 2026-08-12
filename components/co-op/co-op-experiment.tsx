@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import { LikertScale, type LikertValue } from '@/components/LikertScale';
@@ -44,18 +44,19 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
   const [partnerCompleted, setPartnerCompleted] = useState(false);
   const [responses, setResponses] = useState<Response[]>([]);
   const [error, setError] = useState('');
+  const answerChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const currentIndex = Math.max(0, room.current_question - 1);
   const question = questions[currentIndex];
 
   const refreshQuestionState = useCallback(async (questionId: string) => {
-    const { data } = await supabase
-      .from('responses')
-      .select('participant_id')
-      .eq('room_id', room.id)
-      .eq('question_id', questionId);
-    setMyCompleted(Boolean(data?.some((item) => item.participant_id === participant.id)));
-    setPartnerCompleted(Boolean(data?.some((item) => item.participant_id !== participant.id)));
+    const { data } = await supabase.rpc('get_co_op_question_status', {
+      target_room_id: room.id,
+      target_question_id: questionId,
+    });
+    const status = Array.isArray(data) ? data[0] : data;
+    setMyCompleted(Boolean(status?.own_completed));
+    setPartnerCompleted(Boolean(status?.partner_completed));
   }, [participant.id, room.id, supabase]);
 
   useEffect(() => {
@@ -93,7 +94,11 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    answerChannelRef.current = channel;
+    return () => {
+      answerChannelRef.current = null;
+      supabase.removeChannel(channel);
+    };
   }, [participant.id, question, refreshQuestionState, room.id, supabase]);
 
   useEffect(() => {
@@ -138,9 +143,7 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
     }
     setMyCompleted(true);
     if (updatedRoom) setRoom((Array.isArray(updatedRoom) ? updatedRoom[0] : updatedRoom) as Room);
-    const channel = supabase.channel(`room:${room.id}:question:${question.id}`);
-    await channel.send({ type: 'broadcast', event: 'answer_completed', payload: { participantId: participant.id, completed: true } });
-    await supabase.removeChannel(channel);
+    await answerChannelRef.current?.send({ type: 'broadcast', event: 'answer_completed', payload: { participantId: participant.id, completed: true } });
   }
 
   if (room.status === 'completed') {
@@ -148,15 +151,38 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
     responses.forEach((response) => byQuestion.set(response.question_id, [...(byQuestion.get(response.question_id) ?? []), response.score_value]));
     const difference = [...byQuestion.values()].reduce((sum, values) => sum + (values.length === 2 ? Math.abs(values[0] - values[1]) : 0), 0);
     const score = Math.round((1 - difference / 96) * 100);
-    const summary = score >= 85 ? '환상의 쿵짝이에요!' : score >= 70 ? '꽤 잘 통하는 사이예요!' : score >= 50 ? '다름을 알아가는 쿵짝이에요!' : '서로의 설명서가 필요한 사이예요!';
+    const completedPairs = [...byQuestion.values()].filter((values) => values.length === 2);
+    const exactMatches = completedPairs.filter(([first, second]) => first === second).length;
+    const closeMatches = completedPairs.filter(([first, second]) => Math.abs(first - second) <= 1).length;
+    const strongMatches = completedPairs.filter(([first, second]) => Math.abs(first) === 2 && first === second).length;
+    const biggestGap = completedPairs.reduce((largest, values, index) => {
+      const gap = Math.abs(values[0] - values[1]);
+      return gap > largest.gap ? { gap, index } : largest;
+    }, { gap: -1, index: 0 });
+    const summary = score >= 85 ? '말하지 않아도 통하는 텔레파시형' : score >= 70 ? '닮음과 다름이 균형 잡힌 단짝형' : score >= 50 ? '차이를 발견할수록 재밌는 탐험형' : '대화할수록 가까워지는 반전형';
+    const gapQuestion = questions[biggestGap.index]?.title;
     return (
       <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
-        <motion.section animate={{ opacity: 1, scale: 1 }} className="w-full rounded-3xl border-3 border-black bg-brand-mint p-7 text-center shadow-neo-lg" initial={{ opacity: 0, scale: 0.9 }}>
+        <motion.section animate={{ opacity: 1, scale: 1 }} className="w-full min-w-0 rounded-3xl border-3 border-black bg-brand-mint p-5 text-center shadow-neo-lg sm:p-7" initial={{ opacity: 0, scale: 0.9 }}>
           <p className="text-xs font-black tracking-widest">EXPERIMENT COMPLETE</p>
           <span aria-hidden className="mt-5 block text-7xl">💞</span>
           <h1 className="mt-4 text-3xl font-black">우리의 쿵짝 스코어</h1>
           <p className="mt-3 text-7xl font-black">{responses.length === 48 ? score : '…'}<span className="text-3xl">%</span></p>
           <p className="mt-4 font-black">{responses.length === 48 ? summary : '두 사람의 답변을 분석하고 있어요.'}</p>
+          {responses.length === 48 ? (
+            <div className="mt-7 grid grid-cols-3 gap-2 text-center">
+              <ResultStat label="완전 일치" value={`${exactMatches}개`} color="bg-brand-yellow" />
+              <ResultStat label="비슷한 답" value={`${closeMatches}개`} color="bg-brand-blue" />
+              <ResultStat label="강한 공감" value={`${strongMatches}개`} color="bg-brand-pink" />
+            </div>
+          ) : null}
+          {responses.length === 48 && gapQuestion ? (
+            <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 text-left">
+              <p className="text-xs font-black tracking-wider">우리의 대화 포인트 💬</p>
+              <p className="mt-2 text-sm font-bold leading-6">“{gapQuestion}”</p>
+              <p className="mt-2 text-xs font-semibold">이 질문에서 {biggestGap.gap}단계 차이가 났어요. 서로의 이유를 물어보면 의외의 이야기가 시작될 거예요.</p>
+            </div>
+          ) : null}
           <Link className="neo-button mt-7 inline-flex items-center bg-brand-yellow" href="/">홈으로 돌아가기</Link>
         </motion.section>
       </main>
@@ -171,7 +197,7 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
         <div className="flex justify-between text-sm font-black"><span>둘이 함께 답하는 중</span><span>{room.current_question} / {TEST_LENGTH}</span></div>
         <div className="mt-3 h-4 overflow-hidden rounded-full border-3 border-black bg-white"><motion.div animate={{ width: `${room.current_question / TEST_LENGTH * 100}%` }} className="h-full bg-brand-blue" /></div>
         <AnimatePresence mode="wait">
-          <motion.article key={question.id} animate={{ opacity: 1, x: 0 }} className="mt-7 rounded-3xl border-3 border-black bg-white p-6 shadow-neo-lg" exit={{ opacity: 0, x: -30 }} initial={{ opacity: 0, x: 30 }}>
+          <motion.article key={question.id} animate={{ opacity: 1, x: 0 }} className="mt-7 min-w-0 overflow-hidden rounded-3xl border-3 border-black bg-white p-4 shadow-neo-lg min-[380px]:p-6" exit={{ opacity: 0, x: -30 }} initial={{ opacity: 0, x: 30 }}>
             <p className="text-xs font-black text-neutral-500">질문 {room.current_question}</p>
             <h1 className="mb-8 mt-3 min-h-24 text-2xl font-black leading-9">{question.title}</h1>
             <LikertScale disabled={myCompleted} onChange={setSelectedValue} value={selectedValue} />
@@ -186,4 +212,8 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
       </section>
     </main>
   );
+}
+
+function ResultStat({ color, label, value }: { color: string; label: string; value: string }) {
+  return <div className={`min-w-0 rounded-xl border-2 border-black p-2 ${color}`}><p className="text-lg font-black">{value}</p><p className="mt-1 text-[10px] font-black">{label}</p></div>;
 }

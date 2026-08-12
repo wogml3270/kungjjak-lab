@@ -302,6 +302,33 @@ $$;
 revoke all on function public.submit_co_op_response(uuid, uuid, uuid, integer, smallint) from public;
 grant execute on function public.submit_co_op_response(uuid, uuid, uuid, integer, smallint) to authenticated;
 
+create or replace function public.get_co_op_question_status(
+  target_room_id uuid,
+  target_question_id uuid
+)
+returns table (own_completed boolean, partner_completed boolean)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    exists (
+      select 1 from public.responses r
+      join public.participants p on p.id = r.participant_id
+      where r.room_id = target_room_id and r.question_id = target_question_id and p.user_id = auth.uid()
+    ),
+    exists (
+      select 1 from public.responses r
+      join public.participants p on p.id = r.participant_id
+      where r.room_id = target_room_id and r.question_id = target_question_id and p.user_id <> auth.uid()
+    )
+  where public.is_room_member(target_room_id);
+$$;
+
+revoke all on function public.get_co_op_question_status(uuid, uuid) from public;
+grant execute on function public.get_co_op_question_status(uuid, uuid) to authenticated;
+
 alter table public.rooms enable row level security;
 alter table public.participants enable row level security;
 alter table public.questions enable row level security;
