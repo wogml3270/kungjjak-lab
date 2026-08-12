@@ -10,8 +10,14 @@ async function createOrRestoreAnonymousSession() {
   } = await supabase.auth.getSession();
 
   if (session?.user.id) {
-    window.localStorage.setItem(ANONYMOUS_USER_ID_KEY, session.user.id);
-    return session.user.id;
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data.user?.id) {
+      window.localStorage.setItem(ANONYMOUS_USER_ID_KEY, data.user.id);
+      return data.user.id;
+    }
+
+    // 모바일 인앱 브라우저에 만료된 세션이 남아 있으면 새 익명 세션으로 복구한다.
+    await supabase.auth.signOut({ scope: 'local' });
   }
 
   const { data, error } = await supabase.auth.signInAnonymously();

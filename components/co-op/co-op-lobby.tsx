@@ -10,6 +10,18 @@ import { createClient } from '@/lib/supabase/client';
 type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
 type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean };
 
+function roomEntryMessage(cause: unknown) {
+  const message = cause instanceof Error
+    ? cause.message
+    : typeof cause === 'object' && cause && 'message' in cause
+      ? String(cause.message)
+      : String(cause);
+  if (/Authentication|required|JWT|session/i.test(message)) return '익명 참여 세션을 만들지 못했어요. 페이지를 새로고침해 다시 시도해 주세요.';
+  if (/duplicate|unique|already|unavailable/i.test(message)) return '이미 두 명이 참여한 방이에요. 방장에게 새 초대 링크를 요청해 주세요.';
+  if (/not found/i.test(message)) return '존재하지 않거나 만료된 방이에요. 방 코드를 다시 확인해 주세요.';
+  return '방에 입장하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.';
+}
+
 export function CoOpLobby({ code }: { code: string }) {
   const supabase = useMemo(() => createClient(), []);
   const [room, setRoom] = useState<Room | null>(null);
@@ -63,7 +75,7 @@ export function CoOpLobby({ code }: { code: string }) {
       } catch (cause) {
         console.error('[co-op] room entry failed', cause);
         if (!active) return;
-        setError('입장할 수 없는 방이에요. 코드가 틀렸거나 이미 두 명이 참여했을 수 있어요.');
+        setError(roomEntryMessage(cause));
       }
     }
 
@@ -115,6 +127,32 @@ export function CoOpLobby({ code }: { code: string }) {
     }
   }
 
+  async function shareToKakao() {
+    const javascriptKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
+    if (!javascriptKey) {
+      setMessage('카카오 JavaScript 키 설정이 필요해요. 일반 공유를 이용해 주세요.');
+      return;
+    }
+
+    try {
+      const kakao = await loadKakaoSdk();
+      if (!kakao.isInitialized()) kakao.init(javascriptKey);
+      kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: '쿵짝 실험에 초대받았어요 🫶',
+          description: `방 코드 ${code} · 로그인 없이 바로 참여할 수 있어요.`,
+          imageUrl: `${window.location.origin}/opengraph-image`,
+          link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl },
+        },
+        buttons: [{ title: '2인 쿵짝 실험 참여하기', link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl } }],
+      });
+    } catch (cause) {
+      console.error('[co-op] Kakao share failed', cause);
+      setMessage('카카오톡 공유를 열지 못했어요. 일반 공유를 이용해 주세요.');
+    }
+  }
+
   async function startExperiment() {
     if (!room || !isHost || !isFull) return;
     const { error: startError } = await supabase.from('rooms').update({ status: 'in_progress', current_question: 1 }).eq('id', room.id);
@@ -141,7 +179,10 @@ export function CoOpLobby({ code }: { code: string }) {
         {error ? (
           <div className="mt-6 rounded-2xl border-3 border-black bg-brand-pink p-4">
             <p className="font-black" role="alert">{error}</p>
-            <Link className="neo-button mt-4 inline-flex items-center bg-white" href="/co-op">다른 방 찾기</Link>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button className="neo-button bg-brand-yellow" onClick={() => window.location.reload()} type="button">다시 입장하기</button>
+              <Link className="neo-button inline-flex items-center bg-white" href="/co-op">다른 방 찾기</Link>
+            </div>
           </div>
         ) : (
           <>
@@ -169,7 +210,12 @@ export function CoOpLobby({ code }: { code: string }) {
               </motion.p>
             </AnimatePresence>
 
-            {isHost && !isFull ? <button className="neo-button mt-5 w-full bg-brand-blue" onClick={shareInvite} type="button">초대 링크 공유하기</button> : null}
+            {isHost && !isFull ? (
+              <div className="mt-5 grid gap-3">
+                <button className="neo-button w-full bg-[#FEE500]" onClick={shareToKakao} type="button">카카오톡으로 초대하기</button>
+                <button className="neo-button w-full bg-brand-blue" onClick={shareInvite} type="button">다른 앱으로 공유하기</button>
+              </div>
+            ) : null}
             {isHost && isFull ? <button className="neo-button mt-5 w-full bg-brand-pink" onClick={startExperiment} type="button">24문항 실험 시작하기</button> : null}
             {!isHost && room ? <p className="mt-5 rounded-xl border-2 border-black bg-brand-blue p-3 text-center text-sm font-bold">방장이 실험을 시작할 때까지 잠시 기다려 주세요.</p> : null}
           </>
@@ -179,4 +225,29 @@ export function CoOpLobby({ code }: { code: string }) {
       </motion.section>
     </main>
   );
+}
+
+type KakaoSdk = {
+  init: (key: string) => void;
+  isInitialized: () => boolean;
+  Share: { sendDefault: (options: Record<string, unknown>) => void };
+};
+
+declare global {
+  interface Window { Kakao?: KakaoSdk }
+}
+
+let kakaoSdkPromise: Promise<KakaoSdk> | null = null;
+
+function loadKakaoSdk() {
+  if (window.Kakao) return Promise.resolve(window.Kakao);
+  kakaoSdkPromise ??= new Promise<KakaoSdk>((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js';
+    script.crossOrigin = 'anonymous';
+    script.onload = () => window.Kakao ? resolve(window.Kakao) : reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
+    script.onerror = () => reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
+    document.head.appendChild(script);
+  });
+  return kakaoSdkPromise;
 }
