@@ -1,5 +1,7 @@
 'use client';
 
+import { motion } from 'framer-motion';
+
 export type LikertValue = -2 | -1 | 0 | 1 | 2;
 
 type LikertScaleProps = {
@@ -41,8 +43,9 @@ export function LikertScale({ disabled = false, onChange, value }: LikertScalePr
                 type="radio"
                 value={option.value}
               />
-              <span
+              <motion.span
                 aria-hidden
+                animate={selected ? { scale: [1, 1.14, 1], rotate: [0, -3, 0] } : { scale: 1, rotate: 0 }}
                 className={`${option.size} rounded-full border-3 border-black shadow-neo transition-transform peer-focus-visible:outline peer-focus-visible:outline-3 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-black peer-checked:translate-x-1 peer-checked:translate-y-1 peer-checked:shadow-none ${
                   selected
                     ? 'bg-brand-yellow'
@@ -52,6 +55,9 @@ export function LikertScale({ disabled = false, onChange, value }: LikertScalePr
                         ? 'bg-brand-pink'
                         : 'bg-white'
                 }`}
+                transition={{ duration: 0.32 }}
+                whileHover={{ scale: 1.08, y: -3 }}
+                whileTap={{ scale: 0.9 }}
               />
               <span className="min-h-9 whitespace-pre-line text-center text-[10px] font-black leading-4 sm:text-xs">
                 {option.shortLabel}

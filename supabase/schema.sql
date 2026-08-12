@@ -107,9 +107,20 @@ create table if not exists public.reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.solo_results (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  mbti char(4) not null check (mbti ~ '^[EI][SN][TF][JP]$'),
+  confidence smallint not null check (confidence between 0 and 100),
+  axis_scores jsonb not null,
+  answers jsonb not null,
+  completed_at timestamptz not null default now()
+);
+
 create index if not exists participants_user_id_idx on public.participants(user_id);
 create index if not exists responses_room_question_idx on public.responses(room_id, question_id);
 create index if not exists rooms_expires_at_idx on public.rooms(expires_at);
+create index if not exists solo_results_user_completed_idx on public.solo_results(user_id, completed_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -215,6 +226,7 @@ alter table public.participants enable row level security;
 alter table public.questions enable row level security;
 alter table public.responses enable row level security;
 alter table public.reports enable row level security;
+alter table public.solo_results enable row level security;
 
 -- Rooms: creators can create; only members can read/update their room.
 create policy "rooms_insert_as_host"
@@ -288,12 +300,25 @@ create policy "reports_read_for_members"
 on public.reports for select to authenticated
 using (public.is_room_member(room_id));
 
+create policy "solo_results_read_own"
+on public.solo_results for select to authenticated
+using (user_id = auth.uid() and (auth.jwt()->>'is_anonymous')::boolean is false);
+
+create policy "solo_results_insert_own"
+on public.solo_results for insert to authenticated
+with check (user_id = auth.uid() and (auth.jwt()->>'is_anonymous')::boolean is false);
+
+create policy "solo_results_delete_own"
+on public.solo_results for delete to authenticated
+using (user_id = auth.uid() and (auth.jwt()->>'is_anonymous')::boolean is false);
+
 -- Table grants are still constrained by the RLS policies above.
 grant select, insert, update on public.rooms to authenticated;
 grant select, insert, update on public.participants to authenticated;
 grant select on public.questions to authenticated;
 grant select, insert on public.responses to authenticated;
 grant select on public.reports to authenticated;
+grant select, insert, delete on public.solo_results to authenticated;
 
 -- Realtime payloads must never include score_value before both submissions. The app broadcasts
 -- only { roomId, questionId, participantId, completed: true } on private room channels.

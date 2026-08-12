@@ -1,8 +1,15 @@
 import { ServiceCard } from '@/components/home/service-card';
+import { SoloResumeCard } from '@/components/home/solo-resume-card';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const signedIn = Boolean(user && !user.is_anonymous);
   return (
     <main className="mx-auto min-h-screen max-w-md px-5 pb-12 pt-8">
+      <nav className="mb-5 flex justify-end"><Link className="rounded-full border-2 border-black bg-white px-4 py-2 text-sm font-black shadow-neo" href={signedIn ? '/mypage' : '/login'}>{signedIn ? '마이페이지' : '로그인'}</Link></nav>
       <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <span className="absolute -right-3 -top-5 rotate-12 text-7xl" aria-hidden>
           🧪
@@ -16,6 +23,8 @@ export default function HomePage() {
           혼자 성향을 발견하고, 연인과 같은 질문에 답하며 서로를 더 알아가요.
         </p>
       </header>
+
+      <SoloResumeCard />
 
       <section aria-labelledby="services-title" className="mt-9 space-y-6">
         <div className="flex items-end justify-between px-1">

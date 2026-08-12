@@ -138,6 +138,8 @@ stateDiagram-v2
 - 진행 중에는 상대방의 선택 완료 여부만 전송합니다. 실제 `-2~+2` 점수는 양쪽 제출 완료 후에만 상대에게 공개합니다.
 - 질문 화면에는 `EI`, `SN`, `TF`, `JP` 등의 내부 지표 라벨을 표시하지 않습니다.
 - 연애 재판소와 UGC는 Phase 2 범위이며 Phase 1 랜딩에서는 Coming Soon으로만 노출합니다.
+- 검사는 비회원도 이용할 수 있으며 Google 또는 Kakao 로그인 시 Solo 결과를 마이페이지에 보관합니다.
+- 마이페이지는 내 정보와 Solo 기록 탭으로 시작하고 이후 Co-op 기록을 확장합니다.
 
 ## 초기 데이터 모델
 
@@ -148,6 +150,7 @@ stateDiagram-v2
 | `questions` | `id`, `position`, `dimension`, `title`, `positive_trait` | 두 모드가 공유하는 52문항 풀과 비노출 채점 메타데이터 |
 | `responses` | `room_id`, `participant_id`, `question_id`, `score_value` | -2~+2 응답과 중복 방지 원장 |
 | `reports` | `room_id`, `difference_sum`, `score`, `summary`, `guide` | 두 사람의 응답 차이와 결과 스냅샷 |
+| `solo_results` | `user_id`, `mbti`, `confidence`, `axis_scores`, `completed_at` | 소셜 로그인 사용자의 Solo 결과 이력 |
 
 실제 스키마에서는 익명 참여자 토큰, RLS 정책, 응답의 `(room_id, participant_id, question_id)` 유일성, 만료된 방 정리 정책이 필요합니다.
 
