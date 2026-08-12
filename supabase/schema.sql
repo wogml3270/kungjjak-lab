@@ -221,6 +221,87 @@ $$;
 revoke all on function public.join_room(text) from public;
 grant execute on function public.join_room(text) to authenticated;
 
+-- Persist an answer and advance the room in one transaction. Realtime is notification-only;
+-- losing a websocket event can never leave two completed participants stuck on a question.
+create or replace function public.submit_co_op_response(
+  target_room_id uuid,
+  target_participant_id uuid,
+  target_question_id uuid,
+  target_question_number integer,
+  target_score_value smallint
+)
+returns public.rooms
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  locked_room public.rooms;
+  result_room public.rooms;
+  response_count integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select * into locked_room
+  from public.rooms
+  where id = target_room_id
+    and mode = 'co_op'
+    and status = 'in_progress'
+  for update;
+
+  if locked_room.id is null then
+    raise exception 'Room not found or not in progress';
+  end if;
+
+  if locked_room.current_question <> target_question_number then
+    raise exception 'Question has already advanced';
+  end if;
+
+  if target_score_value < -2 or target_score_value > 2 then
+    raise exception 'Invalid score';
+  end if;
+
+  if not exists (
+    select 1 from public.participants p
+    where p.id = target_participant_id
+      and p.room_id = target_room_id
+      and p.user_id = auth.uid()
+  ) then
+    raise exception 'Participant mismatch';
+  end if;
+
+  if not exists (select 1 from public.questions q where q.id = target_question_id and q.is_active) then
+    raise exception 'Question not found';
+  end if;
+
+  insert into public.responses (room_id, participant_id, question_id, score_value)
+  values (target_room_id, target_participant_id, target_question_id, target_score_value)
+  on conflict (room_id, participant_id, question_id)
+  do update set score_value = excluded.score_value, submitted_at = now();
+
+  select count(*) into response_count
+  from public.responses r
+  where r.room_id = target_room_id and r.question_id = target_question_id;
+
+  if response_count >= 2 then
+    update public.rooms
+    set current_question = case when target_question_number < 24 then target_question_number + 1 else current_question end,
+        status = case when target_question_number >= 24 then 'completed'::public.room_status else status end
+    where id = target_room_id
+    returning * into result_room;
+  else
+    result_room := locked_room;
+  end if;
+
+  return result_room;
+end;
+$$;
+
+revoke all on function public.submit_co_op_response(uuid, uuid, uuid, integer, smallint) from public;
+grant execute on function public.submit_co_op_response(uuid, uuid, uuid, integer, smallint) to authenticated;
+
 alter table public.rooms enable row level security;
 alter table public.participants enable row level security;
 alter table public.questions enable row level security;

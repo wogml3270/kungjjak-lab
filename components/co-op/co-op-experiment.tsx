@@ -45,27 +45,18 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
   const [responses, setResponses] = useState<Response[]>([]);
   const [error, setError] = useState('');
 
-  const isHost = participant.role === 'host';
   const currentIndex = Math.max(0, room.current_question - 1);
   const question = questions[currentIndex];
 
-  const checkAndAdvance = useCallback(async (questionId: string) => {
+  const refreshQuestionState = useCallback(async (questionId: string) => {
     const { data } = await supabase
       .from('responses')
-      .select('participant_id, question_id, score_value')
+      .select('participant_id')
       .eq('room_id', room.id)
       .eq('question_id', questionId);
-    if ((data?.length ?? 0) < 2 || !isHost) return;
-
-    if (room.current_question >= TEST_LENGTH) {
-      await supabase.from('rooms').update({ status: 'completed' }).eq('id', room.id);
-      setRoom((current) => ({ ...current, status: 'completed' }));
-    } else {
-      const next = room.current_question + 1;
-      await supabase.from('rooms').update({ current_question: next }).eq('id', room.id);
-      setRoom((current) => ({ ...current, current_question: next }));
-    }
-  }, [isHost, room.current_question, room.id, supabase]);
+    setMyCompleted(Boolean(data?.some((item) => item.participant_id === participant.id)));
+    setPartnerCompleted(Boolean(data?.some((item) => item.participant_id !== participant.id)));
+  }, [participant.id, room.id, supabase]);
 
   useEffect(() => {
     async function loadQuestions() {
@@ -88,12 +79,8 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
     setMyCompleted(false);
     setPartnerCompleted(false);
     if (!question) return;
-    supabase.from('responses').select('participant_id').eq('room_id', room.id).eq('question_id', question.id).then(({ data }) => {
-      setMyCompleted(Boolean(data?.some((item) => item.participant_id === participant.id)));
-      setPartnerCompleted(Boolean(data?.some((item) => item.participant_id !== participant.id)));
-      if ((data?.length ?? 0) === 2) checkAndAdvance(question.id).catch(console.error);
-    });
-  }, [checkAndAdvance, participant.id, question, room.id, supabase]);
+    refreshQuestionState(question.id).catch(console.error);
+  }, [participant.id, question, refreshQuestionState, room.id, supabase]);
 
   useEffect(() => {
     if (!question) return;
@@ -102,12 +89,12 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
       .on('broadcast', { event: 'answer_completed' }, ({ payload }) => {
         if (payload.participantId !== participant.id && payload.completed === true) {
           setPartnerCompleted(true);
-          checkAndAdvance(question.id).catch(console.error);
+          refreshQuestionState(question.id).catch(console.error);
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [checkAndAdvance, participant.id, question, room.id, supabase]);
+  }, [participant.id, question, refreshQuestionState, room.id, supabase]);
 
   useEffect(() => {
     const channel = supabase
@@ -118,27 +105,42 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
   }, [room.id, supabase]);
 
   useEffect(() => {
+    if (!question || room.status !== 'in_progress') return;
+    const fallback = window.setInterval(async () => {
+      const { data } = await supabase
+        .from('rooms')
+        .select('id, code, status, host_user_id, current_question')
+        .eq('id', room.id)
+        .single();
+      if (data) setRoom(data as Room);
+      await refreshQuestionState(question.id);
+    }, 2500);
+    return () => window.clearInterval(fallback);
+  }, [question, refreshQuestionState, room.id, room.status, supabase]);
+
+  useEffect(() => {
     if (room.status !== 'completed') return;
     supabase.from('responses').select('participant_id, question_id, score_value').eq('room_id', room.id).then(({ data }) => setResponses((data ?? []) as Response[]));
   }, [room.id, room.status, supabase]);
 
   async function submitAnswer() {
     if (!question || selectedValue === undefined || myCompleted) return;
-    const { error: responseError } = await supabase.from('responses').insert({
-      room_id: room.id,
-      participant_id: participant.id,
-      question_id: question.id,
-      score_value: selectedValue,
+    const { data: updatedRoom, error: responseError } = await supabase.rpc('submit_co_op_response', {
+      target_room_id: room.id,
+      target_participant_id: participant.id,
+      target_question_id: question.id,
+      target_question_number: room.current_question,
+      target_score_value: selectedValue,
     });
     if (responseError) {
       setError('답변을 저장하지 못했어요. 다시 시도해 주세요.');
       return;
     }
     setMyCompleted(true);
+    if (updatedRoom) setRoom((Array.isArray(updatedRoom) ? updatedRoom[0] : updatedRoom) as Room);
     const channel = supabase.channel(`room:${room.id}:question:${question.id}`);
     await channel.send({ type: 'broadcast', event: 'answer_completed', payload: { participantId: participant.id, completed: true } });
     await supabase.removeChannel(channel);
-    await checkAndAdvance(question.id);
   }
 
   if (room.status === 'completed') {

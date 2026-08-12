@@ -115,7 +115,7 @@ export function CoOpLobby({ code }: { code: string }) {
   const isFull = participants.length === 2;
 
   async function shareInvite() {
-    const shareData = { title: '쿵짝랩 초대장', text: '나와 함께 2인 쿵짝 실험할래?', url: inviteUrl };
+    const shareData = { title: '쿵짝랩 초대장', text: `나와 함께 2인 쿵짝 실험할래?\n${inviteUrl}`, url: inviteUrl };
     try {
       if (navigator.share) await navigator.share(shareData);
       else {
@@ -214,6 +214,7 @@ export function CoOpLobby({ code }: { code: string }) {
               <div className="mt-5 grid gap-3">
                 <button className="neo-button w-full bg-[#FEE500]" onClick={shareToKakao} type="button">카카오톡으로 초대하기</button>
                 <button className="neo-button w-full bg-brand-blue" onClick={shareInvite} type="button">다른 앱으로 공유하기</button>
+                <button className="neo-button w-full bg-white" onClick={async () => { await navigator.clipboard.writeText(inviteUrl); setMessage('초대 링크를 복사했어요!'); }} type="button">초대 링크 복사하기</button>
               </div>
             ) : null}
             {isHost && isFull ? <button className="neo-button mt-5 w-full bg-brand-pink" onClick={startExperiment} type="button">24문항 실험 시작하기</button> : null}
