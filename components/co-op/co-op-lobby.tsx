@@ -8,7 +8,7 @@ import { ensureAnonymousSession } from '@/lib/supabase/anonymous';
 import { createClient } from '@/lib/supabase/client';
 
 type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
-type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean };
+type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null };
 
 function roomEntryMessage(cause: unknown) {
   const message = cause instanceof Error
@@ -29,11 +29,14 @@ export function CoOpLobby({ code }: { code: string }) {
   const [userId, setUserId] = useState('');
   const [message, setMessage] = useState('초대장을 확인하고 있어요…');
   const [error, setError] = useState('');
+  const [displayName, setDisplayName] = useState<string>();
+
+  useEffect(() => { setDisplayName(window.localStorage.getItem('kungjjak_co_op_name') ?? ''); }, []);
 
   const loadParticipants = useCallback(async (roomId: string) => {
     const { data, error: participantError } = await supabase
       .from('participants')
-      .select('id, user_id, role, is_ready')
+      .select('id, user_id, role, is_ready, display_name')
       .eq('room_id', roomId)
       .order('joined_at');
     if (participantError) throw participantError;
@@ -44,6 +47,7 @@ export function CoOpLobby({ code }: { code: string }) {
     let active = true;
 
     async function enterRoom() {
+      if (!displayName) return;
       try {
         const currentUserId = await ensureAnonymousSession();
         if (!active) return;
@@ -59,6 +63,7 @@ export function CoOpLobby({ code }: { code: string }) {
           const { data: joined, error: joinError } = await supabase.rpc('join_room', { room_code: code });
           if (joinError) throw joinError;
           const participant = Array.isArray(joined) ? joined[0] : joined;
+          await supabase.from('participants').update({ display_name: displayName }).eq('id', participant.id);
           const { data, error: roomError } = await supabase
             .from('rooms')
             .select('id, code, status, host_user_id, current_question')
@@ -81,7 +86,7 @@ export function CoOpLobby({ code }: { code: string }) {
 
     enterRoom();
     return () => { active = false; };
-  }, [code, loadParticipants, supabase]);
+  }, [code, displayName, loadParticipants, supabase]);
 
   useEffect(() => {
     if (!room) return;
@@ -162,8 +167,10 @@ export function CoOpLobby({ code }: { code: string }) {
 
   if (room && ['in_progress', 'calculating', 'completed'].includes(room.status)) {
     const me = participants.find((participant) => participant.user_id === userId);
-    if (me) return <CoOpExperiment participant={me} room={room} />;
+    if (me) return <CoOpExperiment participant={me} participants={participants} room={room} />;
   }
+
+  if (displayName === '') return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><form className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const name = String(form.get('name') ?? '').trim(); if (name) { window.localStorage.setItem('kungjjak_co_op_name', name); setDisplayName(name); } }}><p className="text-xs font-black tracking-widest">INVITATION</p><h1 className="mt-2 text-2xl font-black">어떤 이름으로 참여할까요?</h1><input autoFocus className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" maxLength={20} name="name" placeholder="예: 재희" required /><button className="neo-button mt-4 w-full bg-brand-mint" type="submit">이 이름으로 입장하기</button></form></main>;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
@@ -197,7 +204,7 @@ export function CoOpLobby({ code }: { code: string }) {
                 return (
                   <motion.div key={participant?.id ?? index} animate={{ opacity: 1, y: 0 }} className={`rounded-2xl border-3 border-black p-4 text-center ${participant ? 'bg-brand-mint' : 'bg-neutral-100'}`} initial={{ opacity: 0, y: 12 }}>
                     <span aria-hidden className="text-3xl">{participant ? (participant.user_id === userId ? '🙋' : '🙌') : '⏳'}</span>
-                    <p className="mt-2 text-sm font-black">{participant ? (participant.user_id === userId ? '나' : participant.role === 'host' ? '방장' : '초대받은 사람') : '자리 비어 있음'}</p>
+                    <p className="mt-2 text-sm font-black">{participant ? `${participant.display_name ?? (participant.user_id === userId ? '나' : '상대방')}${participant.user_id === userId ? ' (나)' : ''}` : '자리 비어 있음'}</p>
                     <p className="mt-1 text-xs font-bold">{participant ? '입장 완료' : '기다리는 중'}</p>
                   </motion.div>
                 );

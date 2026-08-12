@@ -14,6 +14,7 @@ function normalizeCode(value: string) {
 export function CoOpEntry() {
   const router = useRouter();
   const [roomCode, setRoomCode] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,6 +23,9 @@ export function CoOpEntry() {
     setError('');
 
     try {
+      const nickname = displayName.trim();
+      if (!nickname) { setError('실험에서 사용할 이름을 입력해 주세요.'); setIsLoading(false); return; }
+      window.localStorage.setItem('kungjjak_co_op_name', nickname);
       const userId = await ensureAnonymousSession();
       const supabase = createClient();
       const { data: room, error: roomError } = await supabase
@@ -36,6 +40,7 @@ export function CoOpEntry() {
         room_id: room.id,
         user_id: userId,
         role: 'host',
+        display_name: nickname,
         is_ready: true,
       });
 
@@ -54,6 +59,8 @@ export function CoOpEntry() {
       setError('4자리 방 코드를 입력해 주세요.');
       return;
     }
+    if (!displayName.trim()) { setError('실험에서 사용할 이름을 입력해 주세요.'); return; }
+    window.localStorage.setItem('kungjjak_co_op_name', displayName.trim());
     router.push(`/co-op/${roomCode}`);
   }
 
@@ -70,8 +77,10 @@ export function CoOpEntry() {
         <p className="mt-4 text-xs font-black tracking-widest">2-PERSON CO-OP</p>
         <h1 className="mt-2 text-3xl font-black">우리 쿵짝 실험하기</h1>
         <p className="mt-3 font-semibold leading-7">방을 만들고 딱 한 사람을 초대해 보세요. 두 사람이 모이면 함께 실험을 시작할 수 있어요.</p>
+        <label className="mt-6 block text-sm font-black" htmlFor="display-name">실험에서 사용할 이름</label>
+        <input className="mt-2 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" id="display-name" maxLength={20} onChange={(event) => setDisplayName(event.target.value)} placeholder="예: 재희" value={displayName} />
 
-        <button className="neo-button mt-6 w-full bg-brand-yellow disabled:cursor-wait disabled:opacity-60" disabled={isLoading} onClick={createRoom} type="button">
+        <button className="neo-button mt-4 w-full bg-brand-yellow disabled:cursor-wait disabled:opacity-60" disabled={isLoading} onClick={createRoom} type="button">
           {isLoading ? '실험실 준비 중…' : '새로운 방 만들기'}
         </button>
 

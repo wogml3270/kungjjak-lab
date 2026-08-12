@@ -27,12 +27,25 @@ body {
   outline-offset: 3px;
 }
 
+@keyframes login-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-5px); }
+}
+
+.login-nudge {
+  animation: login-nudge 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  transform-origin: right center;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 

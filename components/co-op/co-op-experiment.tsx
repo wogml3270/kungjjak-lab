@@ -7,7 +7,7 @@ import { LikertScale, type LikertValue } from '@/components/LikertScale';
 import { createClient } from '@/lib/supabase/client';
 
 type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
-type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean };
+type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null };
 type Dimension = 'EI' | 'SN' | 'TF' | 'JP';
 type Question = { id: string; position: number; title: string; positive_trait: string; dimension: Dimension };
 type Response = { participant_id: string; question_id: string; score_value: number };
@@ -43,7 +43,7 @@ function selectQuestions(bank: Question[], code: string) {
   return shuffle(traits.flatMap((trait) => shuffle(bank.filter((question) => question.positive_trait === trait)).slice(0, 3)));
 }
 
-export function CoOpExperiment({ participant, room: initialRoom }: { participant: Participant; room: Room }) {
+export function CoOpExperiment({ participant, participants, room: initialRoom }: { participant: Participant; participants: Participant[]; room: Room }) {
   const supabase = useMemo(() => createClient(), []);
   const [room, setRoom] = useState(initialRoom);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -187,6 +187,7 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
           <p className="text-xs font-black tracking-widest">EXPERIMENT COMPLETE</p>
           <span aria-hidden className="mt-5 block text-7xl">💞</span>
           <h1 className="mt-4 text-3xl font-black">우리의 쿵짝 스코어</h1>
+          <p className="mt-2 text-sm font-black">{participants.map((item) => item.display_name ?? (item.id === participant.id ? '나' : '상대방')).join(' × ')}</p>
           <p className="mt-3 text-7xl font-black">{responses.length === 48 ? score : '…'}<span className="text-3xl">%</span></p>
           <p className="mt-4 font-black">{responses.length === 48 ? summary : '두 사람의 답변을 분석하고 있어요.'}</p>
           {responses.length === 48 ? (
@@ -225,7 +226,8 @@ export function CoOpExperiment({ participant, room: initialRoom }: { participant
               <p className="mt-2 text-xs font-semibold">이 질문에서 {biggestGap.gap}단계 차이가 났어요. 서로의 이유를 물어보면 의외의 이야기가 시작될 거예요.</p>
             </div>
           ) : null}
-          <Link className="neo-button mt-7 inline-flex items-center bg-brand-yellow" href="/">홈으로 돌아가기</Link>
+          <Link className="neo-button mt-7 flex items-center justify-center bg-brand-yellow" href="/mypage?tab=co-op">← 2인 기록 목록으로</Link>
+          <Link className="mt-4 block text-sm font-black underline" href="/">홈으로 돌아가기</Link>
         </motion.section>
       </main>
     );
