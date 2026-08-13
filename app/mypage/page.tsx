@@ -21,13 +21,14 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   const initialTab = params.tab === 'solo' || params.tab === 'co-op' ? params.tab : 'profile';
   const [soloResult, membershipResult] = await Promise.all([
     supabase.from('solo_results').select('id, mbti, confidence, axis_scores, completed_at').order('completed_at', { ascending: false }),
-    supabase.from('participants').select('room_id').eq('user_id', user.id).order('joined_at', { ascending: false }),
+    supabase.from('participants').select('id, room_id').eq('user_id', user.id).eq('is_ready', true).order('joined_at', { ascending: false }),
   ]);
 
   if (soloResult.error) console.error('[mypage] solo history query failed', soloResult.error);
   if (membershipResult.error) console.error('[mypage] membership query failed', membershipResult.error);
 
   const roomIds = [...new Set((membershipResult.data ?? []).map(({ room_id }) => room_id).filter(Boolean))];
+  const membershipByRoom = new Map((membershipResult.data ?? []).map((membership) => [membership.room_id, membership.id]));
   const [roomResult, reportResult, participantResult, responseResult, questionResult] = roomIds.length
     ? await Promise.all([
         supabase.from('rooms').select('id, status, created_at').in('id', roomIds).eq('status', 'completed'),
@@ -85,6 +86,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     const biggestGap = entries.reduce((largest, [questionId, values]) => Math.abs(values[0] - values[1]) > largest.gap ? { gap: Math.abs(values[0] - values[1]), questionId } : largest, { gap: -1, questionId: '' });
     return {
       id: report?.id ?? room.id,
+      participantId: membershipByRoom.get(room.id) ?? '',
       score: report ? Number(report.score) : fallbackScore,
       createdAt: report?.created_at ?? room.created_at,
       names: names.length === 2 ? names : ['나', '상대방'],

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 
 type Tab = 'profile' | 'solo' | 'co-op';
 type SoloHistory = { id: string; mbti: string; confidence: number; axis_scores: Record<string, number>; completed_at: string };
 type AxisResult = { dimension: string; left: string; leftTrait: string; right: string; rightTrait: string; chemistry: number; leftPercent: number; rightPercent: number };
 type CoOpHistory = {
   id: string;
+  participantId: string;
   score: number;
   createdAt: string;
   names: string[];
@@ -37,6 +39,24 @@ export function MyPageDashboard({ coOpHistories, email, initialTab, name, provid
   const [tab, setTab] = useState<Tab>(initialTab);
   const [selectedSolo, setSelectedSolo] = useState<SoloHistory | null>(null);
   const [selectedResult, setSelectedResult] = useState<CoOpHistory | null>(null);
+  const [visibleSoloHistories, setVisibleSoloHistories] = useState(soloHistories);
+  const [visibleCoOpHistories, setVisibleCoOpHistories] = useState(coOpHistories);
+
+  async function deleteSolo(item: SoloHistory) {
+    if (!window.confirm(`${item.mbti} Solo 기록을 삭제할까요? 삭제 후 복구할 수 없어요.`)) return;
+    const { error } = await createClient().from('solo_results').delete().eq('id', item.id);
+    if (error) { window.alert('기록을 삭제하지 못했어요. 다시 시도해 주세요.'); return; }
+    setVisibleSoloHistories((items) => items.filter(({ id }) => id !== item.id));
+    if (selectedSolo?.id === item.id) setSelectedSolo(null);
+  }
+
+  async function deleteCoOp(item: CoOpHistory) {
+    if (!window.confirm(`${item.names.join(' × ')} 기록을 내 목록에서 삭제할까요?`)) return;
+    const { error } = await createClient().from('participants').update({ is_ready: false }).eq('id', item.participantId);
+    if (error) { window.alert('기록을 삭제하지 못했어요. 다시 시도해 주세요.'); return; }
+    setVisibleCoOpHistories((items) => items.filter(({ id }) => id !== item.id));
+    if (selectedResult?.id === item.id) setSelectedResult(null);
+  }
 
   function changeTab(nextTab: Tab) {
     setTab(nextTab);
@@ -50,9 +70,9 @@ export function MyPageDashboard({ coOpHistories, email, initialTab, name, provid
 
     {tab === 'profile' ? <section className="mt-6 rounded-3xl border-3 border-black bg-white p-6 shadow-neo"><h2 className="text-xl font-black">내 정보</h2><dl className="mt-5 space-y-4 text-sm"><div><dt className="font-black text-neutral-500">이름</dt><dd className="mt-1 font-bold">{name}</dd></div><div><dt className="font-black text-neutral-500">이메일</dt><dd className="mt-1 break-all font-bold">{email}</dd></div><div><dt className="font-black text-neutral-500">로그인 방식</dt><dd className="mt-1 font-bold">{provider}</dd></div></dl></section> : null}
 
-    {tab === 'solo' ? <section className="mt-6 space-y-4">{soloHistories.length === 0 ? <Empty text="아직 저장된 Solo 기록이 없어요." /> : soloHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedSolo(item)} type="button"><div><p className="text-2xl font-black">{item.mbti}</p><DateText value={item.completed_at} /></div><span aria-hidden className="text-2xl">→</span></button>)}</section> : null}
+    {tab === 'solo' ? <section className="mt-6 space-y-4">{visibleSoloHistories.length === 0 ? <Empty text="아직 저장된 Solo 기록이 없어요." /> : visibleSoloHistories.map((item) => <div className="flex items-center gap-2" key={item.id}><button className="flex min-w-0 flex-1 items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" onClick={() => setSelectedSolo(item)} type="button"><div><p className="text-2xl font-black">{item.mbti}</p><DateText value={item.completed_at} /></div><span aria-hidden className="text-2xl">→</span></button><DeleteButton label={`${item.mbti} 기록 삭제`} onClick={() => void deleteSolo(item)} /></div>)}</section> : null}
 
-    {tab === 'co-op' ? <section className="mt-6 space-y-4">{coOpHistories.length === 0 ? <Empty text="완료된 2인 멀티버스 기록이 없어요." /> : coOpHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedResult(item)} type="button"><div><p className="font-black">{item.names.join(' × ')}</p><DateText value={item.createdAt} /></div><span className="rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">{Math.round(item.score)}%</span></button>)}</section> : null}
+    {tab === 'co-op' ? <section className="mt-6 space-y-4">{visibleCoOpHistories.length === 0 ? <Empty text="완료된 2인 멀티버스 기록이 없어요." /> : visibleCoOpHistories.map((item) => <div className="flex items-center gap-2" key={item.id}><button className="flex min-w-0 flex-1 items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" onClick={() => setSelectedResult(item)} type="button"><div className="min-w-0"><p className="truncate font-black">{item.names.join(' × ')}</p><DateText value={item.createdAt} /></div><span className="ml-2 shrink-0 rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">{Math.round(item.score)}%</span></button><DeleteButton label={`${item.names.join(' × ')} 기록 삭제`} onClick={() => void deleteCoOp(item)} /></div>)}</section> : null}
 
     <ResultDrawer onClose={() => setSelectedResult(null)} result={selectedResult} />
     <SoloResultDrawer onClose={() => setSelectedSolo(null)} result={selectedSolo} />
@@ -141,3 +161,4 @@ function CelebrationParticles() { const colors = ['bg-brand-pink', 'bg-brand-yel
 function ResultStat({ color, label, value }: { color: string; label: string; value: string }) { return <div className={`min-w-0 rounded-xl border-2 border-black p-2 ${color}`}><p className="text-lg font-black">{value}</p><p className="mt-1 text-[10px] font-black">{label}</p></div>; }
 function DateText({ value }: { value: string }) { return <p className="mt-1 text-xs font-bold text-neutral-500">{new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))}</p>; }
 function Empty({ text }: { text: string }) { return <div className="rounded-3xl border-3 border-black bg-white p-6 text-center font-bold shadow-neo">{text}</div>; }
+function DeleteButton({ label, onClick }: { label: string; onClick: () => void }) { return <button aria-label={label} className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-brand-pink text-lg shadow-[2px_2px_0_#000] transition-transform hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none" onClick={onClick} title="기록 삭제" type="button">🗑️</button>; }
