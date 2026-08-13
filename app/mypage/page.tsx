@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { MyPageDashboard } from '@/components/mypage/mypage-dashboard';
 import { createClient } from '@/lib/supabase/server';
+import { normalizeProfileImage } from '@/lib/profile-image';
 
 const axes = [
   { dimension: 'EI', left: '외향적', leftTrait: 'E', right: '내향적', rightTrait: 'I' },
@@ -50,7 +51,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     await Promise.all(uniqueUserIds.map(async (userId) => {
       const { data } = await admin.auth.admin.getUserById(userId);
       const candidate = data.user?.user_metadata.avatar_url ?? data.user?.user_metadata.picture;
-      if (typeof candidate === 'string' && candidate.startsWith('https://')) avatarByUser.set(userId, candidate);
+      avatarByUser.set(userId, normalizeProfileImage(candidate));
     }));
   }
   const profilesByRoom = new Map<string, Array<{ name: string; avatarUrl: string; role: string }>>();
