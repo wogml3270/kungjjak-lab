@@ -100,10 +100,11 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     };
   });
   const name = user.user_metadata.full_name ?? user.user_metadata.name ?? user.user_metadata.preferred_username ?? '쿵짝 연구원';
+  const profileImage = normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture);
 
   return <main className="mx-auto min-h-screen max-w-md px-5 py-8">
     <header className="flex items-center justify-between"><Link className="font-black underline underline-offset-4" href="/">← 홈</Link><SignOutButton /></header>
     <section className="mt-6 rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg"><p className="text-xs font-black tracking-widest">MY LAB</p><h1 className="mt-2 text-3xl font-black">{name}님의 연구 기록</h1></section>
-    <MyPageDashboard coOpHistories={coOpHistories} email={user.email ?? '이메일 비공개'} initialTab={initialTab} name={name} provider={user.app_metadata.provider === 'kakao' ? 'Kakao' : 'Google'} soloHistories={soloResult.data ?? []} />
+    <MyPageDashboard coOpHistories={coOpHistories} createdAt={user.created_at} email={user.email ?? '이메일 비공개'} initialTab={initialTab} lastSignInAt={user.last_sign_in_at ?? null} name={name} profileImage={profileImage} provider={user.app_metadata.provider === 'kakao' ? 'Kakao' : 'Google'} soloHistories={soloResult.data ?? []} />
   </main>;
 }
