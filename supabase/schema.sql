@@ -62,11 +62,13 @@ create table if not exists public.participants (
   user_id uuid not null references auth.users(id) on delete cascade,
   role public.participant_role not null,
   is_ready boolean not null default false,
+  display_name text,
   avatar_url text,
   joined_at timestamptz not null default now(),
   ready_at timestamptz,
   constraint participants_room_user_unique unique (room_id, user_id),
-  constraint participants_room_role_unique unique (room_id, role)
+  constraint participants_room_role_unique unique (room_id, role),
+  constraint participants_display_name_length check (display_name is null or char_length(display_name) between 1 and 10)
 );
 
 create table if not exists public.questions (
