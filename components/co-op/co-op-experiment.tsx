@@ -184,7 +184,7 @@ export function CoOpExperiment({ onLeave, participant, participants, room: initi
     return (
       <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
         <motion.section animate={{ opacity: 1 }} className="w-full min-w-0" initial={{ opacity: 0 }}><p className="mb-4 text-xs font-black tracking-widest">EXPERIMENT COMPLETE</p>
-          {responses.length === 48 ? <CoOpResultDisplay axisResults={axisResults} closeMatches={closeMatches} exactMatches={exactMatches} gap={biggestGap.gap} gapQuestion={gapQuestion ?? null} profiles={participants.map((item) => ({ name: item.display_name ?? '상대방', avatarUrl: item.avatar_url ?? '/default-profile.svg' }))} score={score} strongMatches={strongMatches} /> : <p className="rounded-3xl border-3 border-black bg-brand-yellow p-6 text-center font-black shadow-neo">두 사람의 답변을 분석하고 있어요.</p>}
+          {responses.length === 48 ? <CoOpResultDisplay axisResults={axisResults} closeMatches={closeMatches} exactMatches={exactMatches} gap={biggestGap.gap} gapQuestion={gapQuestion ?? null} profiles={participants.map((item) => ({ name: item.display_name ?? '상대방', avatarUrl: item.avatar_url ?? '/default-profile.svg', role: item.role }))} score={score} strongMatches={strongMatches} /> : <p className="rounded-3xl border-3 border-black bg-brand-yellow p-6 text-center font-black shadow-neo">두 사람의 답변을 분석하고 있어요.</p>}
           <Link className="neo-button mt-7 flex items-center justify-center bg-brand-yellow" href="/mypage?tab=co-op">2인 기록 보기</Link>
           <Link className="mt-4 block text-sm font-black underline" href="/">홈으로 돌아가기</Link>
         </motion.section>

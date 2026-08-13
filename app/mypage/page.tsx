@@ -21,7 +21,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   const initialTab = params.tab === 'solo' || params.tab === 'co-op' ? params.tab : 'profile';
   const [soloResult, membershipResult] = await Promise.all([
     supabase.from('solo_results').select('id, mbti, confidence, axis_scores, completed_at').order('completed_at', { ascending: false }),
-    supabase.from('participants').select('id, room_id').eq('user_id', user.id).eq('is_ready', true).order('joined_at', { ascending: false }),
+    supabase.from('participants').select('id, room_id').eq('user_id', user.id).eq('history_visible', true).order('joined_at', { ascending: false }),
   ]);
 
   if (soloResult.error) console.error('[mypage] solo history query failed', soloResult.error);
@@ -90,7 +90,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
       score: report ? Number(report.score) : fallbackScore,
       createdAt: report?.created_at ?? room.created_at,
       names: names.length === 2 ? names : ['나', '상대방'],
-      profiles: profiles.length === 2 ? profiles.map(({ name: participantName, avatarUrl }) => ({ name: participantName, avatarUrl })) : [{ name: '나', avatarUrl: '/default-profile.svg' }, { name: '상대방', avatarUrl: '/default-profile.svg' }],
+      profiles: profiles.length === 2 ? profiles.map(({ name: participantName, avatarUrl, role }) => ({ name: participantName, avatarUrl, role })) : [{ name: '나', avatarUrl: '/default-profile.svg', role: 'host' }, { name: '상대방', avatarUrl: '/default-profile.svg', role: 'guest' }],
       exactMatches: pairs.filter(([first, second]) => first === second).length,
       closeMatches: pairs.filter(([first, second]) => Math.abs(first - second) <= 1).length,
       strongMatches: pairs.filter(([first, second]) => Math.abs(first) === 2 && first === second).length,

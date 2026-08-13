@@ -15,7 +15,7 @@ type CoOpHistory = {
   score: number;
   createdAt: string;
   names: string[];
-  profiles: Array<{ name: string; avatarUrl: string }>;
+  profiles: Array<{ name: string; avatarUrl: string; role: string }>;
   exactMatches: number;
   closeMatches: number;
   strongMatches: number;
@@ -59,7 +59,7 @@ export function MyPageDashboard({ coOpHistories, createdAt, email, initialTab, l
 
   async function deleteCoOp(item: CoOpHistory) {
     if (!window.confirm(`${item.names.join(' × ')} 기록을 내 목록에서 삭제할까요?`)) return;
-    const { error } = await createClient().from('participants').update({ is_ready: false }).eq('id', item.participantId);
+    const { error } = await createClient().from('participants').update({ history_visible: false }).eq('id', item.participantId);
     if (error) { window.alert('기록을 삭제하지 못했어요. 다시 시도해 주세요.'); return; }
     setVisibleCoOpHistories((items) => items.filter(({ id }) => id !== item.id));
     if (selectedResult?.id === item.id) setSelectedResult(null);
@@ -79,7 +79,7 @@ export function MyPageDashboard({ coOpHistories, createdAt, email, initialTab, l
 
     {tab === 'solo' ? <section className="mt-6 space-y-4">{visibleSoloHistories.length === 0 ? <Empty text="아직 저장된 Solo 기록이 없어요." /> : visibleSoloHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedSolo(item)} type="button"><div><p className="text-2xl font-black">{item.mbti}</p><DateText value={item.completed_at} /></div><span aria-hidden className="text-2xl">→</span></button>)}</section> : null}
 
-    {tab === 'co-op' ? <section className="mt-6 space-y-4">{visibleCoOpHistories.length === 0 ? <Empty text="완료된 2인 멀티버스 기록이 없어요." /> : visibleCoOpHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedResult(item)} type="button"><div className="min-w-0"><p className="truncate font-black">{item.names.join(' × ')}</p><DateText value={item.createdAt} /></div><span className="ml-2 shrink-0 rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">{Math.round(item.score)}%</span></button>)}</section> : null}
+    {tab === 'co-op' ? <section className="mt-6 space-y-4">{visibleCoOpHistories.length === 0 ? <Empty text="완료된 2인 멀티버스 기록이 없어요." /> : visibleCoOpHistories.map((item) => <button className="w-full rounded-2xl border-3 border-black bg-white p-4 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedResult(item)} type="button"><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 flex-1 items-center gap-2">{item.profiles.map((profile) => <div className="min-w-0 flex-1 text-center" key={`${item.id}-${profile.role}`}><div className="mx-auto size-12 overflow-hidden rounded-full border-2 border-black bg-white"><img alt={`${profile.name} 프로필`} className="size-full object-cover" src={profile.avatarUrl} /></div><p className="mt-1 truncate text-xs font-black">{profile.name}</p><span className={`inline-flex rounded-full border border-black px-2 py-0.5 text-[9px] font-black ${profile.role === 'host' ? 'bg-brand-yellow' : 'bg-brand-blue'}`}>{profile.role === 'host' ? '호스트' : '게스트'}</span></div>)}</div><span className="shrink-0 rounded-full border-2 border-black bg-brand-mint px-3 py-2 text-sm font-black">{Math.round(item.score)}%</span></div><div className="mt-3 border-t-2 border-dashed border-neutral-300 pt-2"><DateText value={item.createdAt} /></div></button>)}</section> : null}
 
     <ResultDrawer onClose={() => setSelectedResult(null)} onDelete={deleteCoOp} result={selectedResult} />
     <SoloResultDrawer onClose={() => setSelectedSolo(null)} onDelete={deleteSolo} result={selectedSolo} />
