@@ -62,6 +62,7 @@ create table if not exists public.participants (
   user_id uuid not null references auth.users(id) on delete cascade,
   role public.participant_role not null,
   is_ready boolean not null default false,
+  avatar_url text,
   joined_at timestamptz not null default now(),
   ready_at timestamptz,
   constraint participants_room_user_unique unique (room_id, user_id),

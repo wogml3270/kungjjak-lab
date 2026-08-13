@@ -5,9 +5,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import { LikertScale, type LikertValue } from '@/components/LikertScale';
 import { createClient } from '@/lib/supabase/client';
+import { CoOpResultDisplay } from '@/components/co-op/co-op-result-display';
 
 type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
-type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null };
+type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null; avatar_url: string | null };
 type Dimension = 'EI' | 'SN' | 'TF' | 'JP';
 type Question = { id: string; position: number; title: string; positive_trait: string; dimension: Dimension };
 type Response = { participant_id: string; question_id: string; score_value: number };
@@ -179,54 +180,12 @@ export function CoOpExperiment({ onLeave, participant, participants, room: initi
       const gap = Math.abs(values[0] - values[1]);
       return gap > largest.gap ? { gap, questionId } : largest;
     }, { gap: -1, questionId: '' });
-    const summary = score >= 85 ? '말하지 않아도 통하는 텔레파시형' : score >= 70 ? '닮음과 다름이 균형 잡힌 단짝형' : score >= 50 ? '차이를 발견할수록 재밌는 탐험형' : '대화할수록 가까워지는 반전형';
     const gapQuestion = questionById.get(biggestGap.questionId)?.title;
     return (
       <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
-        <motion.section animate={{ opacity: 1, scale: 1 }} className="w-full min-w-0 rounded-3xl border-3 border-black bg-brand-mint p-5 text-center shadow-neo-lg sm:p-7" initial={{ opacity: 0, scale: 0.9 }}>
-          <p className="text-xs font-black tracking-widest">EXPERIMENT COMPLETE</p>
-          <span aria-hidden className="mt-5 block text-7xl">💞</span>
-          <h1 className="mt-4 text-3xl font-black">우리의 쿵짝 스코어</h1>
-          <p className="mt-2 text-sm font-black">{participants.map((item) => item.display_name ?? (item.id === participant.id ? '나' : '상대방')).join(' × ')}</p>
-          <p className="mt-3 text-7xl font-black">{responses.length === 48 ? score : '…'}<span className="text-3xl">%</span></p>
-          <p className="mt-4 font-black">{responses.length === 48 ? summary : '두 사람의 답변을 분석하고 있어요.'}</p>
-          {responses.length === 48 ? (
-            <div className="mt-7 grid grid-cols-3 gap-2 text-center">
-              <ResultStat label="완전 일치" value={`${exactMatches}개`} color="bg-brand-yellow" />
-              <ResultStat label="비슷한 답" value={`${closeMatches}개`} color="bg-brand-blue" />
-              <ResultStat label="강한 공감" value={`${strongMatches}개`} color="bg-brand-pink" />
-            </div>
-          ) : null}
-          {responses.length === 48 ? (
-            <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 text-left">
-              <h2 className="font-black">우리의 심리 밸런스</h2>
-              <p className="mt-1 text-xs font-semibold text-neutral-600">두 사람의 답변 강도를 합쳐 네 가지 성향 축으로 분석했어요.</p>
-              <div className="mt-5 space-y-5">
-                {axisResults.map((axis) => (
-                  <div key={axis.dimension}>
-                    <div className="flex justify-between gap-2 text-xs font-black">
-                      <span>{axis.left}({axis.leftTrait}) {axis.leftPercent}%</span>
-                      <span>{axis.rightPercent}% {axis.right}({axis.rightTrait})</span>
-                    </div>
-                    <div className="mt-2 flex h-4 overflow-hidden rounded-full border-2 border-black">
-                      <div className="bg-brand-pink" style={{ width: `${axis.leftPercent}%` }} />
-                      <div className="bg-brand-blue" style={{ width: `${axis.rightPercent}%` }} />
-                    </div>
-                    <p className="mt-1 text-right text-[10px] font-black text-neutral-600">이 축의 쿵짝 {axis.chemistry}%</p>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-5 border-t-2 border-black pt-3 text-xs font-bold leading-5">최종 쿵짝 스코어는 네 가지 축별 쿵짝 점수의 평균이에요.</p>
-            </div>
-          ) : null}
-          {responses.length === 48 && gapQuestion ? (
-            <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 text-left">
-              <p className="text-xs font-black tracking-wider">우리의 대화 포인트 💬</p>
-              <p className="mt-2 text-sm font-bold leading-6">“{gapQuestion}”</p>
-              <p className="mt-2 text-xs font-semibold">이 질문에서 {biggestGap.gap}단계 차이가 났어요. 서로의 이유를 물어보면 의외의 이야기가 시작될 거예요.</p>
-            </div>
-          ) : null}
-          <Link className="neo-button mt-7 flex items-center justify-center bg-brand-yellow" href="/mypage?tab=co-op">← 2인 기록 목록으로</Link>
+        <motion.section animate={{ opacity: 1 }} className="w-full min-w-0" initial={{ opacity: 0 }}><p className="mb-4 text-xs font-black tracking-widest">EXPERIMENT COMPLETE</p>
+          {responses.length === 48 ? <CoOpResultDisplay axisResults={axisResults} closeMatches={closeMatches} exactMatches={exactMatches} gap={biggestGap.gap} gapQuestion={gapQuestion ?? null} profiles={participants.map((item) => ({ name: item.display_name ?? '상대방', avatarUrl: item.avatar_url ?? '/default-profile.svg' }))} score={score} strongMatches={strongMatches} /> : <p className="rounded-3xl border-3 border-black bg-brand-yellow p-6 text-center font-black shadow-neo">두 사람의 답변을 분석하고 있어요.</p>}
+          <Link className="neo-button mt-7 flex items-center justify-center bg-brand-yellow" href="/mypage?tab=co-op">2인 기록 보기</Link>
           <Link className="mt-4 block text-sm font-black underline" href="/">홈으로 돌아가기</Link>
         </motion.section>
       </main>

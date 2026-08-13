@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import { NicknameEditor } from '@/components/profile/nickname-editor';
+import { CoOpResultDisplay } from '@/components/co-op/co-op-result-display';
 
 type Tab = 'profile' | 'solo' | 'co-op';
 type SoloHistory = { id: string; mbti: string; confidence: number; axis_scores: Record<string, number>; completed_at: string };
@@ -28,13 +30,15 @@ const tabs: Array<{ label: string; value: Tab; color: string }> = [
   { label: '2인 기록', value: 'co-op', color: 'bg-brand-mint' },
 ];
 
-export function MyPageDashboard({ coOpHistories, createdAt, email, initialTab, lastSignInAt, name, profileImage, provider, soloHistories }: {
+export function MyPageDashboard({ coOpHistories, createdAt, email, initialTab, lastSignInAt, name, nextNicknameChangeAt, nickname, profileImage, provider, soloHistories }: {
   coOpHistories: CoOpHistory[];
   createdAt: string;
   email: string;
   initialTab: Tab;
   lastSignInAt: string | null;
   name: string;
+  nextNicknameChangeAt: string | null;
+  nickname: string;
   profileImage: string;
   provider: string;
   soloHistories: SoloHistory[];
@@ -71,7 +75,7 @@ export function MyPageDashboard({ coOpHistories, createdAt, email, initialTab, l
       {tabs.map((item) => <button aria-current={tab === item.value ? 'page' : undefined} className={`neo-button flex items-center justify-center text-center ${tab === item.value ? item.color : 'bg-white'}`} disabled={tab === item.value} key={item.value} onClick={() => changeTab(item.value)} type="button">{item.label}</button>)}
     </nav>
 
-    {tab === 'profile' ? <motion.section animate={{ opacity: 1, y: 0 }} className="mt-6 overflow-hidden rounded-3xl border-3 border-black bg-white shadow-neo" initial={{ opacity: 0, y: 16 }}><div className="relative bg-brand-mint p-6 text-center"><motion.div animate={{ rotate: [0, -3, 3, 0] }} className="mx-auto size-28 overflow-hidden rounded-full border-3 border-black bg-white shadow-neo" transition={{ duration: 1.1 }} whileHover={{ scale: 1.06, rotate: 0 }}><img alt="내 프로필" className="size-full object-cover" src={profileImage} /></motion.div><h2 className="mt-4 text-2xl font-black">{name}</h2><span className="mt-2 inline-flex rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">{provider} 계정</span></div><dl className="grid grid-cols-2 gap-3 p-5 text-sm"><ProfileInfo color="bg-brand-pink" label="이메일" value={email} wide /><ProfileInfo color="bg-brand-blue" label="가입한 날" value={formatDateTime(createdAt)} /><ProfileInfo color="bg-brand-yellow" label="최근 로그인" value={lastSignInAt ? formatDateTime(lastSignInAt) : '기록 없음'} /><ProfileInfo color="bg-brand-mint" label="완료한 검사" value={`${visibleSoloHistories.length + visibleCoOpHistories.length}회`} /><ProfileInfo color="bg-white" label="보관 중인 기록" value={`Solo ${visibleSoloHistories.length} · 2인 ${visibleCoOpHistories.length}`} /></dl></motion.section> : null}
+    {tab === 'profile' ? <motion.section animate={{ opacity: 1, y: 0 }} className="mt-6 overflow-hidden rounded-3xl border-3 border-black bg-white shadow-neo" initial={{ opacity: 0, y: 16 }}><div className="relative bg-brand-mint p-6 text-center"><motion.div animate={{ rotate: [0, -3, 3, 0] }} className="mx-auto size-28 overflow-hidden rounded-full border-3 border-black bg-white shadow-neo" transition={{ duration: 1.1 }} whileHover={{ scale: 1.06, rotate: 0 }}><img alt="내 프로필" className="size-full object-cover" src={profileImage} /></motion.div><h2 className="mt-4 text-2xl font-black">{name}</h2><span className="mt-2 inline-flex rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">{provider} 계정</span></div><dl className="grid grid-cols-2 gap-3 p-5 text-sm"><NicknameEditor initialNickname={nickname} nextChangeAt={nextNicknameChangeAt} /><ProfileInfo color="bg-brand-pink" label="이메일" value={email} wide /><ProfileInfo color="bg-brand-blue" label="가입한 날" value={formatDateTime(createdAt)} /><ProfileInfo color="bg-brand-yellow" label="최근 로그인" value={lastSignInAt ? formatDateTime(lastSignInAt) : '기록 없음'} /><ProfileInfo color="bg-brand-mint" label="완료한 검사" value={`${visibleSoloHistories.length + visibleCoOpHistories.length}회`} /><ProfileInfo color="bg-white" label="보관 중인 기록" value={`Solo ${visibleSoloHistories.length} · 2인 ${visibleCoOpHistories.length}`} /></dl></motion.section> : null}
 
     {tab === 'solo' ? <section className="mt-6 space-y-4">{visibleSoloHistories.length === 0 ? <Empty text="아직 저장된 Solo 기록이 없어요." /> : visibleSoloHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedSolo(item)} type="button"><div><p className="text-2xl font-black">{item.mbti}</p><DateText value={item.completed_at} /></div><span aria-hidden className="text-2xl">→</span></button>)}</section> : null}
 
@@ -131,37 +135,13 @@ function ResultDrawer({ onClose, onDelete, result }: { onClose: () => void; onDe
         transition={{ type: 'spring', stiffness: 300, damping: 32 }}
       >
         <div className="flex items-center justify-between"><p className="text-xs font-black tracking-widest">CO-OP RESULT</p><button aria-label="결과 닫기" className="flex size-10 items-center justify-center rounded-full border-2 border-black bg-white text-2xl font-black shadow-[2px_2px_0_#000]" onClick={onClose} type="button">×</button></div>
-        <section className="relative mt-5 overflow-hidden rounded-3xl border-3 border-black bg-brand-mint p-5 text-center shadow-neo-lg">
-          <CelebrationParticles />
-          <motion.span animate={{ scale: [0, 1.25, 1], rotate: [0, -8, 5, 0] }} aria-hidden className="relative block text-6xl" initial={{ scale: 0 }} transition={{ delay: .25, duration: .7 }}>💞</motion.span>
-          <motion.h2 animate={{ opacity: 1, y: 0 }} className="relative mt-3 text-3xl font-black" initial={{ opacity: 0, y: 12 }} transition={{ delay: .4 }}>우리의 쿵짝 스코어</motion.h2>
-          <div className="relative mx-auto mt-5 flex max-w-xs items-center justify-center gap-3">
-            <ProfileBadge index={0} profile={result.profiles[0]} />
-            <motion.span animate={{ scale: [0, 1.35, 1] }} aria-hidden className="shrink-0 text-2xl font-black" initial={{ scale: 0 }} transition={{ delay: .8 }}>×</motion.span>
-            <ProfileBadge index={1} profile={result.profiles[1]} />
-          </div>
-          <motion.p animate={{ opacity: 1, scale: 1 }} className="relative mt-4 text-7xl font-black" initial={{ opacity: 0, scale: .65 }} transition={{ delay: .9, type: 'spring', stiffness: 240 }}>{Math.round(result.score)}<span className="text-3xl">%</span></motion.p>
-          <p className="mt-3 font-black">{scoreSummary(result.score)}</p>
-          <div className="mt-6 grid grid-cols-3 gap-2"><ResultStat color="bg-brand-yellow" label="완전 일치" value={`${result.exactMatches}개`} /><ResultStat color="bg-brand-blue" label="비슷한 답" value={`${result.closeMatches}개`} /><ResultStat color="bg-brand-pink" label="강한 공감" value={`${result.strongMatches}개`} /></div>
-        </section>
-
-        <section className="mt-5 rounded-3xl border-3 border-black bg-white p-5 shadow-neo">
-          <h3 className="text-lg font-black">우리의 심리 밸런스</h3>
-          <p className="mt-1 text-xs font-semibold text-neutral-600">두 사람의 답변 강도를 네 가지 성향 축으로 분석했어요.</p>
-          <div className="mt-5 space-y-5">{result.axisResults.map((axis) => <div key={axis.dimension}><div className="flex justify-between gap-2 text-xs font-black"><span>{axis.left}({axis.leftTrait}) {axis.leftPercent}%</span><span>{axis.rightPercent}% {axis.right}({axis.rightTrait})</span></div><div className="mt-2 flex h-4 overflow-hidden rounded-full border-2 border-black"><div className="bg-brand-pink" style={{ width: `${axis.leftPercent}%` }} /><div className="bg-brand-blue" style={{ width: `${axis.rightPercent}%` }} /></div><p className="mt-1 text-right text-[10px] font-black text-neutral-600">이 축의 쿵짝 {axis.chemistry}%</p></div>)}</div>
-        </section>
-
-        {result.gapQuestion ? <section className="mt-5 rounded-3xl border-3 border-black bg-brand-yellow p-5 shadow-neo"><p className="text-xs font-black tracking-wider">우리의 대화 포인트 💬</p><p className="mt-2 font-bold leading-6">“{result.gapQuestion}”</p><p className="mt-2 text-xs font-semibold">이 질문에서 {result.gap}단계 차이가 났어요. 서로의 이유를 물어보세요.</p></section> : null}
+        <div className="mt-5"><CoOpResultDisplay axisResults={result.axisResults} closeMatches={result.closeMatches} exactMatches={result.exactMatches} gap={result.gap} gapQuestion={result.gapQuestion} profiles={result.profiles} score={result.score} strongMatches={result.strongMatches} /></div>
         <DangerZone onDelete={() => void onDelete(result)} />
       </motion.aside>
     </motion.div> : null}
   </AnimatePresence>;
 }
 
-function scoreSummary(score: number) { return score >= 85 ? '말하지 않아도 통하는 텔레파시형' : score >= 70 ? '닮음과 다름이 균형 잡힌 단짝형' : score >= 50 ? '차이를 발견할수록 재밌는 탐험형' : '대화할수록 가까워지는 반전형'; }
-function ProfileBadge({ index, profile }: { index: number; profile: { name: string; avatarUrl: string } }) { return <motion.div animate={{ opacity: 1, x: 0, rotate: index === 0 ? -3 : 3 }} className="min-w-0 flex-1" initial={{ opacity: 0, x: index === 0 ? -40 : 40 }} transition={{ delay: .45 + index * .12, type: 'spring' }}><motion.div className="mx-auto size-20 overflow-hidden rounded-full border-3 border-black bg-white shadow-neo" whileHover={{ scale: 1.08, rotate: 0 }}><img alt={`${profile.name} 프로필`} className="size-full object-cover" src={profile.avatarUrl} /></motion.div><p className="mt-2 truncate rounded-full border-2 border-black bg-white px-2 py-1 text-xs font-black">{profile.name}</p></motion.div>; }
-function CelebrationParticles() { const colors = ['bg-brand-pink', 'bg-brand-yellow', 'bg-brand-blue', 'bg-white']; return <div aria-hidden className="pointer-events-none absolute inset-0">{Array.from({ length: 14 }, (_, index) => <motion.i animate={{ y: [0, 170], x: [0, index % 2 ? 18 : -18], rotate: [0, 240], opacity: [0, 1, 0] }} className={`absolute top-0 size-2 rounded-sm border border-black ${colors[index % colors.length]}`} initial={{ left: `${6 + index * 7}%`, y: -15, opacity: 0 }} key={index} transition={{ delay: .15 + index * .045, duration: 1.5, ease: 'easeOut' }} />)}</div>; }
-function ResultStat({ color, label, value }: { color: string; label: string; value: string }) { return <div className={`min-w-0 rounded-xl border-2 border-black p-2 ${color}`}><p className="text-lg font-black">{value}</p><p className="mt-1 text-[10px] font-black">{label}</p></div>; }
 function DateText({ value }: { value: string }) { return <p className="mt-1 text-xs font-bold text-neutral-500">{new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))}</p>; }
 function Empty({ text }: { text: string }) { return <div className="rounded-3xl border-3 border-black bg-white p-6 text-center font-bold shadow-neo">{text}</div>; }
 function ProfileInfo({ color, label, value, wide = false }: { color: string; label: string; value: string; wide?: boolean }) { return <motion.div className={`min-w-0 rounded-2xl border-2 border-black p-3 ${color} ${wide ? 'col-span-2' : ''}`} whileHover={{ y: -3, rotate: wide ? 0 : -1 }}><dt className="text-[10px] font-black text-neutral-600">{label}</dt><dd className="mt-1 break-all font-black">{value}</dd></motion.div>; }

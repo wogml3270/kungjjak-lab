@@ -7,9 +7,10 @@ import { useRouter } from 'next/navigation';
 import { CoOpExperiment } from '@/components/co-op/co-op-experiment';
 import { ensureAnonymousSession } from '@/lib/supabase/anonymous';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeProfileImage } from '@/lib/profile-image';
 
 type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
-type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null };
+type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null; avatar_url: string | null };
 
 function roomEntryMessage(cause: unknown) {
   const message = cause instanceof Error
@@ -44,7 +45,7 @@ export function CoOpLobby({ code }: { code: string }) {
   const loadParticipants = useCallback(async (roomId: string) => {
     const { data, error: participantError } = await supabase
       .from('participants')
-      .select('id, user_id, role, is_ready, display_name')
+      .select('id, user_id, role, is_ready, display_name, avatar_url')
       .eq('room_id', roomId)
       .order('joined_at');
     if (participantError) throw participantError;
@@ -58,6 +59,9 @@ export function CoOpLobby({ code }: { code: string }) {
       if (!displayName) return;
       try {
         const currentUserId = await ensureAnonymousSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        const playName = user && !user.is_anonymous ? String(user.user_metadata.service_nickname ?? user.user_metadata.full_name ?? user.user_metadata.name ?? displayName).slice(0, 10) : displayName;
+        const avatarUrl = user && !user.is_anonymous ? normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture) : '/default-profile.svg';
         if (!active) return;
         setUserId(currentUserId);
 
@@ -71,7 +75,7 @@ export function CoOpLobby({ code }: { code: string }) {
           const { data: joined, error: joinError } = await supabase.rpc('join_room', { room_code: code });
           if (joinError) throw joinError;
           const participant = Array.isArray(joined) ? joined[0] : joined;
-          await supabase.from('participants').update({ display_name: displayName }).eq('id', participant.id);
+          await supabase.from('participants').update({ display_name: playName, avatar_url: avatarUrl }).eq('id', participant.id);
           const { data, error: roomError } = await supabase
             .from('rooms')
             .select('id, code, status, host_user_id, current_question')
@@ -84,6 +88,8 @@ export function CoOpLobby({ code }: { code: string }) {
         if (!active) return;
         setRoom(foundRoom as Room);
         setMessage('상대방을 기다리고 있어요.');
+        const existingParticipant = await supabase.from('participants').select('id, display_name, avatar_url').eq('room_id', foundRoom.id).eq('user_id', currentUserId).maybeSingle();
+        if (existingParticipant.data && (existingParticipant.data.display_name !== playName || existingParticipant.data.avatar_url !== avatarUrl)) await supabase.from('participants').update({ display_name: playName, avatar_url: avatarUrl }).eq('id', existingParticipant.data.id);
         await loadParticipants(foundRoom.id);
       } catch (cause) {
         console.error('[co-op] room entry failed', cause);
@@ -292,6 +298,7 @@ export function CoOpLobby({ code }: { code: string }) {
             ) : null}
             {isHost && isFull ? <button className="neo-button mt-5 w-full bg-brand-pink" onClick={startExperiment} type="button">24문항 실험 시작하기</button> : null}
             {!isHost && room ? <p className="mt-5 rounded-xl border-2 border-black bg-brand-blue p-3 text-center text-sm font-bold">방장이 실험을 시작할 때까지 잠시 기다려 주세요.</p> : null}
+            <p className="mt-4 rounded-xl border-2 border-black bg-brand-mint p-3 text-center text-xs font-bold">비로그인 참여도 가능하지만, 로그인해야 완료 기록을 마이페이지에서 다시 볼 수 있어요.</p>
           </>
         )}
 

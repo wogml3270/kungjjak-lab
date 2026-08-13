@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ensureAnonymousSession } from '@/lib/supabase/anonymous';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeProfileImage } from '@/lib/profile-image';
 
 function normalizeCode(value: string) {
   return value.toUpperCase().replace(/[^A-Z2-9]/g, '').slice(0, 4);
@@ -28,6 +29,8 @@ export function CoOpEntry() {
       window.localStorage.setItem('kungjjak_co_op_name', nickname);
       const userId = await ensureAnonymousSession();
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      const playName = user && !user.is_anonymous ? String(user.user_metadata.service_nickname ?? user.user_metadata.full_name ?? user.user_metadata.name ?? nickname).slice(0, 10) : nickname;
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({ mode: 'co_op', status: 'waiting_for_guest', host_user_id: userId })
@@ -40,12 +43,13 @@ export function CoOpEntry() {
         room_id: room.id,
         user_id: userId,
         role: 'host',
-        display_name: nickname,
+        display_name: playName,
+        avatar_url: user && !user.is_anonymous ? normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture) : '/default-profile.svg',
         is_ready: true,
       });
 
       if (participantError) throw participantError;
-      window.sessionStorage.setItem(`kungjjak_co_op_name:${room.code}`, nickname);
+      window.sessionStorage.setItem(`kungjjak_co_op_name:${room.code}`, playName);
       router.push(`/co-op/${room.code}`);
     } catch (cause) {
       console.error('[co-op] room creation failed', cause);

@@ -1,0 +1,4 @@
+import type { Metadata } from 'next';
+import { LegalPage } from '@/components/layout/legal-page';
+export const metadata: Metadata = { title: '이용약관' };
+export default function TermsPage() { return <LegalPage title="이용약관"><section><h2 className="text-lg font-black">1. 서비스 성격</h2><p>쿵짝랩은 성향 탐구와 대화를 돕는 엔터테인먼트 서비스입니다. 검사 결과는 의학적·심리학적 진단이 아닙니다.</p></section><section><h2 className="text-lg font-black">2. 이용자 책임</h2><p>타인의 권리를 침해하거나 부적절한 닉네임을 사용해서는 안 되며, 초대 링크와 계정 접근 수단을 안전하게 관리해야 합니다.</p></section><section><h2 className="text-lg font-black">3. 서비스 변경</h2><p>안정적인 운영과 기능 개선을 위해 서비스 내용이 변경되거나 일시 중단될 수 있습니다.</p></section><section><h2 className="text-lg font-black">4. 기록 관리</h2><p>로그인 사용자는 마이페이지에서 자신의 기록을 확인하고 삭제할 수 있습니다. 비로그인 이용 결과는 계정 기록으로 보관되지 않을 수 있습니다.</p></section><section><h2 className="text-lg font-black">5. 문의</h2><p>서비스 문의: wogml3270@gmail.com</p></section></LegalPage>; }

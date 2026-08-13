@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AnonymousSession } from '@/components/auth/anonymous-session';
+import { SiteFooter } from '@/components/layout/site-footer';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
         <AnonymousSession />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

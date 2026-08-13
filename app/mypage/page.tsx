@@ -33,7 +33,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     ? await Promise.all([
         supabase.from('rooms').select('id, status, created_at').in('id', roomIds).eq('status', 'completed'),
         supabase.from('reports').select('id, room_id, score, created_at').in('room_id', roomIds).order('created_at', { ascending: false }),
-        supabase.from('participants').select('room_id, user_id, role, display_name').in('room_id', roomIds),
+        supabase.from('participants').select('room_id, user_id, role, display_name, avatar_url').in('room_id', roomIds),
         supabase.from('responses').select('room_id, question_id, score_value').in('room_id', roomIds),
         supabase.from('questions').select('id, title, dimension, positive_trait').eq('is_active', true),
       ])
@@ -57,7 +57,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   }
   const profilesByRoom = new Map<string, Array<{ name: string; avatarUrl: string; role: string }>>();
   for (const participant of participantResult.data ?? []) {
-    profilesByRoom.set(participant.room_id, [...(profilesByRoom.get(participant.room_id) ?? []), { name: participant.display_name ?? '상대방', avatarUrl: avatarByUser.get(participant.user_id) ?? '/default-profile.svg', role: participant.role }]);
+    profilesByRoom.set(participant.room_id, [...(profilesByRoom.get(participant.room_id) ?? []), { name: participant.display_name ?? '상대방', avatarUrl: participant.avatar_url ? normalizeProfileImage(participant.avatar_url) : avatarByUser.get(participant.user_id) ?? '/default-profile.svg', role: participant.role }]);
   }
   const reportsByRoom = new Map((reportResult.data ?? []).map((report) => [report.room_id, report]));
   const questionsById = new Map((questionResult.data ?? []).map((question) => [question.id, question]));
@@ -100,11 +100,14 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     };
   });
   const name = user.user_metadata.full_name ?? user.user_metadata.name ?? user.user_metadata.preferred_username ?? '쿵짝 연구원';
+  const nickname = user.user_metadata.service_nickname ?? name.slice(0, 10);
+  const changedAt = typeof user.user_metadata.nickname_changed_at === 'string' ? user.user_metadata.nickname_changed_at : null;
+  const nextNicknameChangeAt = changedAt ? new Date(Date.parse(changedAt) + 7 * 86400000).toISOString() : null;
   const profileImage = normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture);
 
   return <main className="mx-auto min-h-screen max-w-md px-5 py-8">
     <header className="flex items-center justify-between"><Link className="font-black underline underline-offset-4" href="/">← 홈</Link><SignOutButton /></header>
     <section className="mt-6 rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg"><p className="text-xs font-black tracking-widest">MY LAB</p><h1 className="mt-2 text-3xl font-black">{name}님의 연구 기록</h1></section>
-    <MyPageDashboard coOpHistories={coOpHistories} createdAt={user.created_at} email={user.email ?? '이메일 비공개'} initialTab={initialTab} lastSignInAt={user.last_sign_in_at ?? null} name={name} profileImage={profileImage} provider={user.app_metadata.provider === 'kakao' ? 'Kakao' : 'Google'} soloHistories={soloResult.data ?? []} />
+    <MyPageDashboard coOpHistories={coOpHistories} createdAt={user.created_at} email={user.email ?? '이메일 비공개'} initialTab={initialTab} lastSignInAt={user.last_sign_in_at ?? null} name={name} nextNicknameChangeAt={nextNicknameChangeAt} nickname={nickname} profileImage={profileImage} provider={user.app_metadata.provider === 'kakao' ? 'Kakao' : 'Google'} soloHistories={soloResult.data ?? []} />
   </main>;
 }

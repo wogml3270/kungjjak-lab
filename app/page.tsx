@@ -3,6 +3,7 @@ import { SoloResumeCard } from '@/components/home/solo-resume-card';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeProfileImage } from '@/lib/profile-image';
+import { NicknameOnboarding } from '@/components/profile/nickname-onboarding';
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -12,6 +13,7 @@ export default async function HomePage() {
   const profileImage = normalizeProfileImage(profileImageCandidate);
   return (
     <main className="mx-auto min-h-screen max-w-md px-5 pb-12 pt-8">
+      {signedIn && !user?.user_metadata.service_nickname ? <NicknameOnboarding suggestedName={String(user?.user_metadata.full_name ?? user?.user_metadata.name ?? '')} /> : null}
       <nav className="mb-5 flex items-center justify-end gap-3">{!signedIn ? <span className="login-nudge relative rounded-xl border-2 border-black bg-brand-mint px-3 py-2 text-xs font-black shadow-[2px_2px_0_#000] after:absolute after:-right-2 after:top-3 after:size-3 after:rotate-45 after:border-r-2 after:border-t-2 after:border-black after:bg-brand-mint">로그인하면 결과를 모아볼 수 있어요</span> : null}<Link aria-label={signedIn ? '마이페이지' : '로그인'} className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-white shadow-neo" href={signedIn ? '/mypage' : '/login'} title={signedIn ? '마이페이지' : '로그인'}>{signedIn ? <img alt="내 프로필" className="size-full object-cover" src={profileImage} /> : <svg aria-hidden="true" className="size-7" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none" /><g fill="currentColor"><path fillRule="evenodd" d="M22 8.293c0 3.476-2.83 6.294-6.32 6.294c-.636 0-2.086-.146-2.791-.732l-.882.878c-.519.517-.379.669-.148.919c.096.105.208.226.295.399c0 0 .735 1.024 0 2.049c-.441.585-1.676 1.404-3.086 0l-.294.292s.881 1.025.147 2.05c-.441.585-1.617 1.17-2.646.146l-1.028 1.024c-.706.703-1.568.293-1.91 0l-.883-.878c-.823-.82-.343-1.708 0-2.05l7.642-7.61s-.735-1.17-.735-2.78c0-3.476 2.83-6.294 6.32-6.294S22 4.818 22 8.293" clipRule="evenodd" opacity=".5" /><path d="M17.885 8.294a2.2 2.2 0 0 1-2.204 2.195a2.2 2.2 0 0 1-2.204-2.195a2.2 2.2 0 0 1 2.204-2.196a2.2 2.2 0 0 1 2.204 2.196" /></g></svg>}</Link></nav>
       <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <span className="absolute -right-3 -top-5 rotate-12 text-7xl" aria-hidden>
@@ -68,16 +70,6 @@ export default async function HomePage() {
         />
       </section>
 
-      <footer className="mt-10 border-t-2 border-black/20 px-2 pt-6 text-center text-xs font-bold text-neutral-600">
-        <p>쿵짝랩 · 혼자서도, 둘이서도 착착 맞는 성향 탐구소</p>
-        <p className="mt-3 text-black">Made by 박재희</p>
-        <nav aria-label="개발자 링크" className="mt-2 flex justify-center gap-4">
-          <a className="underline underline-offset-4" href="https://github.com/wogml3270/kungjjak-lab" rel="noreferrer" target="_blank">GitHub</a>
-          <a className="underline underline-offset-4" href="https://j-fe-blog.vercel.app/" rel="noreferrer" target="_blank">Blog</a>
-          <a className="underline underline-offset-4" href="mailto:wogml3270@gmail.com" rel="noreferrer" target="_blank">Email</a>
-          <a className="underline underline-offset-4" href="https://wogml3270.notion.site/cf22a7bca5ec45a7815997c128d2e0ec" rel="noreferrer" target="_blank">Notion</a>
-        </nav>
-      </footer>
     </main>
   );
 }
