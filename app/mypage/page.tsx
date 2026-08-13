@@ -4,6 +4,13 @@ import { SignOutButton } from '@/components/auth/sign-out-button';
 import { MyPageDashboard } from '@/components/mypage/mypage-dashboard';
 import { createClient } from '@/lib/supabase/server';
 
+const axes = [
+  { dimension: 'EI', left: '외향적', leftTrait: 'E', right: '내향적', rightTrait: 'I' },
+  { dimension: 'SN', left: '현실적', leftTrait: 'S', right: '직관적', rightTrait: 'N' },
+  { dimension: 'TF', left: '논리적', leftTrait: 'T', right: '감정적', rightTrait: 'F' },
+  { dimension: 'JP', left: '계획적', leftTrait: 'J', right: '유연한', rightTrait: 'P' },
+] as const;
+
 export default async function MyPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const supabase = await createClient();
   const [{ data: { user } }, params] = await Promise.all([supabase.auth.getUser(), searchParams]);
@@ -19,19 +26,21 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   if (membershipResult.error) console.error('[mypage] membership query failed', membershipResult.error);
 
   const roomIds = [...new Set((membershipResult.data ?? []).map(({ room_id }) => room_id).filter(Boolean))];
-  const [roomResult, reportResult, participantResult, responseResult] = roomIds.length
+  const [roomResult, reportResult, participantResult, responseResult, questionResult] = roomIds.length
     ? await Promise.all([
         supabase.from('rooms').select('id, status, created_at').in('id', roomIds).eq('status', 'completed'),
         supabase.from('reports').select('id, room_id, score, created_at').in('room_id', roomIds).order('created_at', { ascending: false }),
         supabase.from('participants').select('room_id, display_name').in('room_id', roomIds),
         supabase.from('responses').select('room_id, question_id, score_value').in('room_id', roomIds),
+        supabase.from('questions').select('id, title, dimension, positive_trait').eq('is_active', true),
       ])
-    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
+    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
 
   if (roomResult.error) console.error('[mypage] completed room query failed', roomResult.error);
   if (reportResult.error) console.error('[mypage] co-op report query failed', reportResult.error);
   if (participantResult.error) console.error('[mypage] participant name query failed', participantResult.error);
   if (responseResult.error) console.error('[mypage] response query failed', responseResult.error);
+  if (questionResult.error) console.error('[mypage] question query failed', questionResult.error);
 
   const namesByRoom = new Map<string, string[]>();
   for (const participant of participantResult.data ?? []) {
@@ -39,6 +48,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     namesByRoom.set(participant.room_id, [...(namesByRoom.get(participant.room_id) ?? []), participant.display_name]);
   }
   const reportsByRoom = new Map((reportResult.data ?? []).map((report) => [report.room_id, report]));
+  const questionsById = new Map((questionResult.data ?? []).map((question) => [question.id, question]));
   const responsesByRoom = new Map<string, Map<string, number[]>>();
   for (const response of responseResult.data ?? []) {
     const byQuestion = responsesByRoom.get(response.room_id) ?? new Map<string, number[]>();
@@ -51,7 +61,28 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     const pairs = [...(responsesByRoom.get(room.id)?.values() ?? [])].filter((values) => values.length === 2);
     const difference = pairs.reduce((sum, values) => sum + Math.abs(values[0] - values[1]), 0);
     const fallbackScore = pairs.length === 24 ? Math.round((1 - difference / 96) * 100) : 0;
-    return { id: report?.id ?? room.id, score: report ? Number(report.score) : fallbackScore, createdAt: report?.created_at ?? room.created_at, names: names.length === 2 ? names : ['나', '상대방'] };
+    const entries = [...(responsesByRoom.get(room.id)?.entries() ?? [])].filter(([, values]) => values.length === 2);
+    const axisResults = axes.map((axis) => {
+      const axisPairs = entries.filter(([questionId]) => questionsById.get(questionId)?.dimension === axis.dimension);
+      const axisDifference = axisPairs.reduce((sum, [, values]) => sum + Math.abs(values[0] - values[1]), 0);
+      const tendency = axisPairs.reduce((sum, [questionId, values]) => sum + (values[0] + values[1]) * (questionsById.get(questionId)?.positive_trait === axis.leftTrait ? 1 : -1), 0);
+      const maximum = Math.max(1, axisPairs.length * 4);
+      const leftPercent = Math.round(((tendency + maximum) / (maximum * 2)) * 100);
+      return { ...axis, chemistry: Math.round((1 - axisDifference / maximum) * 100), leftPercent, rightPercent: 100 - leftPercent };
+    });
+    const biggestGap = entries.reduce((largest, [questionId, values]) => Math.abs(values[0] - values[1]) > largest.gap ? { gap: Math.abs(values[0] - values[1]), questionId } : largest, { gap: -1, questionId: '' });
+    return {
+      id: report?.id ?? room.id,
+      score: report ? Number(report.score) : fallbackScore,
+      createdAt: report?.created_at ?? room.created_at,
+      names: names.length === 2 ? names : ['나', '상대방'],
+      exactMatches: pairs.filter(([first, second]) => first === second).length,
+      closeMatches: pairs.filter(([first, second]) => Math.abs(first - second) <= 1).length,
+      strongMatches: pairs.filter(([first, second]) => Math.abs(first) === 2 && first === second).length,
+      axisResults,
+      gap: biggestGap.gap,
+      gapQuestion: questionsById.get(biggestGap.questionId)?.title ?? null,
+    };
   });
   const name = user.user_metadata.full_name ?? user.user_metadata.name ?? user.user_metadata.preferred_username ?? '쿵짝 연구원';
 
