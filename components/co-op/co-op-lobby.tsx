@@ -38,9 +38,21 @@ export function CoOpLobby({ code }: { code: string }) {
   const presenceClosureStartedRef = useRef(false);
 
   useEffect(() => {
-    setSuggestedName(window.localStorage.getItem('kungjjak_co_op_name') ?? '');
-    setDisplayName(window.sessionStorage.getItem(`kungjjak_co_op_name:${code}`));
-  }, [code]);
+    let active = true;
+    async function resolveName() {
+      const recentName = (window.localStorage.getItem('kungjjak_co_op_name') ?? '').slice(0, 10);
+      setSuggestedName(recentName);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+      if (user && !user.is_anonymous) {
+        setDisplayName(String(user.user_metadata.service_nickname ?? user.user_metadata.full_name ?? user.user_metadata.name ?? '쿵짝 연구원').trim().slice(0, 10));
+      } else {
+        setDisplayName(window.sessionStorage.getItem(`kungjjak_co_op_name:${code}`));
+      }
+    }
+    resolveName();
+    return () => { active = false; };
+  }, [code, supabase]);
 
   const loadParticipants = useCallback(async (roomId: string) => {
     const { data, error: participantError } = await supabase
@@ -244,7 +256,7 @@ export function CoOpLobby({ code }: { code: string }) {
     if (me) return <CoOpExperiment onLeave={leaveRoom} participant={me} participants={participants} room={room} />;
   }
 
-  if (displayName === null) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><form className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const name = String(form.get('name') ?? '').trim(); if (name && name.length <= 10) { window.localStorage.setItem('kungjjak_co_op_name', name); window.sessionStorage.setItem(`kungjjak_co_op_name:${code}`, name); setDisplayName(name); } }}><p className="text-xs font-black tracking-widest">INVITATION</p><h1 className="mt-2 text-2xl font-black">이번에는 어떤 이름으로 참여할까요?</h1><p className="mt-2 text-sm font-semibold">최근 사용한 이름을 추천해 드렸어요. 10자 안에서 바꿀 수 있어요.</p><input autoFocus className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" defaultValue={suggestedName.slice(0, 10)} maxLength={10} name="name" placeholder="예: 재희 (최대 10자)" required /><button className="neo-button mt-4 w-full bg-brand-mint" type="submit">이 이름으로 입장하기</button></form></main>;
+  if (displayName === null) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><form className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const name = String(form.get('name') ?? '').trim(); if (name && name.length <= 10) { window.localStorage.setItem('kungjjak_co_op_name', name); window.sessionStorage.setItem(`kungjjak_co_op_name:${code}`, name); setDisplayName(name); } }}><p className="text-xs font-black tracking-widest">GUEST NAME</p><h1 className="mt-2 text-2xl font-black">임시 이름을 정해 주세요</h1><p className="mt-2 text-sm font-semibold">비로그인 참여에만 사용하는 이름이에요. 로그인하면 서비스 닉네임이 자동으로 적용돼요.</p><input autoFocus className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" defaultValue={suggestedName.slice(0, 10)} maxLength={10} name="name" placeholder="예: 재희 (최대 10자)" required /><button className="neo-button mt-4 w-full bg-brand-mint" type="submit">이 이름으로 입장하기</button></form></main>;
   if (displayName === undefined) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><p className="font-black">초대장을 확인하고 있어요…</p></main>;
 
   return (
