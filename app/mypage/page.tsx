@@ -18,7 +18,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
 
   const initialTab = params.tab === 'solo' || params.tab === 'co-op' ? params.tab : 'profile';
   const [soloResult, membershipResult] = await Promise.all([
-    supabase.from('solo_results').select('id, mbti, completed_at').order('completed_at', { ascending: false }),
+    supabase.from('solo_results').select('id, mbti, confidence, axis_scores, completed_at').order('completed_at', { ascending: false }),
     supabase.from('participants').select('room_id').eq('user_id', user.id).order('joined_at', { ascending: false }),
   ]);
 

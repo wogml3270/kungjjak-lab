@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import Link from 'next/link';
 
 type Tab = 'profile' | 'solo' | 'co-op';
-type SoloHistory = { id: string; mbti: string; completed_at: string };
+type SoloHistory = { id: string; mbti: string; confidence: number; axis_scores: Record<string, number>; completed_at: string };
 type AxisResult = { dimension: string; left: string; leftTrait: string; right: string; rightTrait: string; chemistry: number; leftPercent: number; rightPercent: number };
 type CoOpHistory = {
   id: string;
@@ -35,6 +34,7 @@ export function MyPageDashboard({ coOpHistories, email, initialTab, name, provid
   soloHistories: SoloHistory[];
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [selectedSolo, setSelectedSolo] = useState<SoloHistory | null>(null);
   const [selectedResult, setSelectedResult] = useState<CoOpHistory | null>(null);
 
   function changeTab(nextTab: Tab) {
@@ -49,12 +49,38 @@ export function MyPageDashboard({ coOpHistories, email, initialTab, name, provid
 
     {tab === 'profile' ? <section className="mt-6 rounded-3xl border-3 border-black bg-white p-6 shadow-neo"><h2 className="text-xl font-black">내 정보</h2><dl className="mt-5 space-y-4 text-sm"><div><dt className="font-black text-neutral-500">이름</dt><dd className="mt-1 font-bold">{name}</dd></div><div><dt className="font-black text-neutral-500">이메일</dt><dd className="mt-1 break-all font-bold">{email}</dd></div><div><dt className="font-black text-neutral-500">로그인 방식</dt><dd className="mt-1 font-bold">{provider}</dd></div></dl></section> : null}
 
-    {tab === 'solo' ? <section className="mt-6 space-y-4">{soloHistories.length === 0 ? <Empty text="아직 저장된 Solo 기록이 없어요." /> : soloHistories.map((item) => <Link className="flex items-center justify-between rounded-2xl border-3 border-black bg-white p-5 shadow-neo transition-transform hover:-translate-y-0.5" href={`/solo/result/${item.id}`} key={item.id}><div><p className="text-2xl font-black">{item.mbti}</p><DateText value={item.completed_at} /></div><span aria-hidden className="text-2xl">→</span></Link>)}</section> : null}
+    {tab === 'solo' ? <section className="mt-6 space-y-4">{soloHistories.length === 0 ? <Empty text="아직 저장된 Solo 기록이 없어요." /> : soloHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedSolo(item)} type="button"><div><p className="text-2xl font-black">{item.mbti}</p><DateText value={item.completed_at} /></div><span aria-hidden className="text-2xl">→</span></button>)}</section> : null}
 
     {tab === 'co-op' ? <section className="mt-6 space-y-4">{coOpHistories.length === 0 ? <Empty text="완료된 2인 멀티버스 기록이 없어요." /> : coOpHistories.map((item) => <button className="flex w-full items-center justify-between rounded-2xl border-3 border-black bg-white p-5 text-left shadow-neo transition-transform hover:-translate-y-0.5" key={item.id} onClick={() => setSelectedResult(item)} type="button"><div><p className="font-black">{item.names.join(' × ')}</p><DateText value={item.createdAt} /></div><span className="rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">{Math.round(item.score)}%</span></button>)}</section> : null}
 
     <ResultDrawer onClose={() => setSelectedResult(null)} result={selectedResult} />
+    <SoloResultDrawer onClose={() => setSelectedSolo(null)} result={selectedSolo} />
   </>;
+}
+
+const soloAxes = [{ key: 'EI', left: 'E', right: 'I' }, { key: 'SN', left: 'S', right: 'N' }, { key: 'TF', left: 'T', right: 'F' }, { key: 'JP', left: 'J', right: 'P' }] as const;
+function clarityProfile(clarity: number) {
+  if (clarity >= 60) return { label: '선명한 성향형', description: '여러 상황에서도 선호하는 방향이 비교적 뚜렷하게 나타났어요.' };
+  if (clarity >= 30) return { label: '상황 적응형', description: '기본 성향은 있지만 사람과 상황에 맞춰 유연하게 반응하는 편이에요.' };
+  return { label: '균형 탐색형', description: '한쪽 성향에 갇히기보다 서로 다른 방식을 고르게 활용하는 편이에요.' };
+}
+
+function SoloResultDrawer({ onClose, result }: { onClose: () => void; result: SoloHistory | null }) {
+  useEffect(() => {
+    if (!result) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', closeOnEscape); };
+  }, [onClose, result]);
+  const profile = result ? clarityProfile(result.confidence) : null;
+
+  return <AnimatePresence>{result && profile ? <motion.div animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-black/40" exit={{ opacity: 0 }} initial={{ opacity: 0 }} onClick={onClose}><motion.aside animate={{ x: 0 }} aria-label="Solo 결과 상세" aria-modal="true" className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto border-l-3 border-black bg-[#FFF8F0] px-5 py-6 shadow-[-8px_0_0_#000]" exit={{ x: '105%' }} initial={{ x: '105%' }} onClick={(event) => event.stopPropagation()} role="dialog" transition={{ type: 'spring', stiffness: 300, damping: 32 }}>
+    <div className="flex items-center justify-between"><p className="text-xs font-black tracking-widest">SOLO RESULT</p><button aria-label="결과 닫기" className="flex size-10 items-center justify-center rounded-full border-2 border-black bg-white text-2xl font-black shadow-[2px_2px_0_#000]" onClick={onClose} type="button">×</button></div>
+    <section className="mt-5 rounded-3xl border-3 border-black bg-brand-mint p-6 shadow-neo-lg"><h2 className="text-5xl font-black">{result.mbti}</h2><div className="mt-4 rounded-2xl border-3 border-black bg-white p-4"><p className="text-xs font-black tracking-wider">나의 성향 표현 스타일</p><p className="mt-1 text-xl font-black">{profile.label}</p><p className="mt-2 text-xs font-semibold leading-5">{profile.description}</p></div><div className="mt-6 space-y-5">{soloAxes.map(({ key, left, right }) => { const score = Number(result.axis_scores[key] ?? 0); const leftPercent = Math.round(((score + 12) / 24) * 100); return <div key={key}><div className="flex justify-between text-xs font-black"><span>{left} {leftPercent}%</span><span>{100 - leftPercent}% {right}</span></div><div className="mt-2 flex h-4 overflow-hidden rounded-full border-2 border-black"><div className="bg-brand-pink" style={{ width: `${leftPercent}%` }} /><div className="bg-brand-blue" style={{ width: `${100 - leftPercent}%` }} /></div></div>; })}</div></section>
+    <button className="neo-button mt-6 w-full bg-brand-yellow" onClick={onClose} type="button">Solo 기록 목록으로</button>
+  </motion.aside></motion.div> : null}</AnimatePresence>;
 }
 
 function ResultDrawer({ onClose, result }: { onClose: () => void; result: CoOpHistory | null }) {
