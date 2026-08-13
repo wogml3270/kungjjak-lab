@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { MyPageDashboard } from '@/components/mypage/mypage-dashboard';
 import { createClient } from '@/lib/supabase/server';
@@ -30,7 +31,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
     ? await Promise.all([
         supabase.from('rooms').select('id, status, created_at').in('id', roomIds).eq('status', 'completed'),
         supabase.from('reports').select('id, room_id, score, created_at').in('room_id', roomIds).order('created_at', { ascending: false }),
-        supabase.from('participants').select('room_id, display_name').in('room_id', roomIds),
+        supabase.from('participants').select('room_id, user_id, role, display_name').in('room_id', roomIds),
         supabase.from('responses').select('room_id, question_id, score_value').in('room_id', roomIds),
         supabase.from('questions').select('id, title, dimension, positive_trait').eq('is_active', true),
       ])
@@ -42,10 +43,19 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   if (responseResult.error) console.error('[mypage] response query failed', responseResult.error);
   if (questionResult.error) console.error('[mypage] question query failed', questionResult.error);
 
-  const namesByRoom = new Map<string, string[]>();
+  const avatarByUser = new Map<string, string>();
+  const uniqueUserIds = [...new Set((participantResult.data ?? []).map(({ user_id }) => user_id))];
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    await Promise.all(uniqueUserIds.map(async (userId) => {
+      const { data } = await admin.auth.admin.getUserById(userId);
+      const candidate = data.user?.user_metadata.avatar_url ?? data.user?.user_metadata.picture;
+      if (typeof candidate === 'string' && candidate.startsWith('https://')) avatarByUser.set(userId, candidate);
+    }));
+  }
+  const profilesByRoom = new Map<string, Array<{ name: string; avatarUrl: string; role: string }>>();
   for (const participant of participantResult.data ?? []) {
-    if (!participant.display_name) continue;
-    namesByRoom.set(participant.room_id, [...(namesByRoom.get(participant.room_id) ?? []), participant.display_name]);
+    profilesByRoom.set(participant.room_id, [...(profilesByRoom.get(participant.room_id) ?? []), { name: participant.display_name ?? '상대방', avatarUrl: avatarByUser.get(participant.user_id) ?? '/default-profile.svg', role: participant.role }]);
   }
   const reportsByRoom = new Map((reportResult.data ?? []).map((report) => [report.room_id, report]));
   const questionsById = new Map((questionResult.data ?? []).map((question) => [question.id, question]));
@@ -57,7 +67,8 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   }
   const coOpHistories = (roomResult.data ?? []).map((room) => {
     const report = reportsByRoom.get(room.id);
-    const names = namesByRoom.get(room.id) ?? [];
+    const profiles = (profilesByRoom.get(room.id) ?? []).sort((first, second) => first.role === 'host' ? -1 : second.role === 'host' ? 1 : 0);
+    const names = profiles.map(({ name: participantName }) => participantName);
     const pairs = [...(responsesByRoom.get(room.id)?.values() ?? [])].filter((values) => values.length === 2);
     const difference = pairs.reduce((sum, values) => sum + Math.abs(values[0] - values[1]), 0);
     const fallbackScore = pairs.length === 24 ? Math.round((1 - difference / 96) * 100) : 0;
@@ -76,6 +87,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
       score: report ? Number(report.score) : fallbackScore,
       createdAt: report?.created_at ?? room.created_at,
       names: names.length === 2 ? names : ['나', '상대방'],
+      profiles: profiles.length === 2 ? profiles.map(({ name: participantName, avatarUrl }) => ({ name: participantName, avatarUrl })) : [{ name: '나', avatarUrl: '/default-profile.svg' }, { name: '상대방', avatarUrl: '/default-profile.svg' }],
       exactMatches: pairs.filter(([first, second]) => first === second).length,
       closeMatches: pairs.filter(([first, second]) => Math.abs(first - second) <= 1).length,
       strongMatches: pairs.filter(([first, second]) => Math.abs(first) === 2 && first === second).length,

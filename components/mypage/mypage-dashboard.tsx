@@ -11,6 +11,7 @@ type CoOpHistory = {
   score: number;
   createdAt: string;
   names: string[];
+  profiles: Array<{ name: string; avatarUrl: string }>;
   exactMatches: number;
   closeMatches: number;
   strongMatches: number;
@@ -107,11 +108,16 @@ function ResultDrawer({ onClose, result }: { onClose: () => void; result: CoOpHi
         transition={{ type: 'spring', stiffness: 300, damping: 32 }}
       >
         <div className="flex items-center justify-between"><p className="text-xs font-black tracking-widest">CO-OP RESULT</p><button aria-label="결과 닫기" className="flex size-10 items-center justify-center rounded-full border-2 border-black bg-white text-2xl font-black shadow-[2px_2px_0_#000]" onClick={onClose} type="button">×</button></div>
-        <section className="mt-5 rounded-3xl border-3 border-black bg-brand-mint p-5 text-center shadow-neo-lg">
-          <span aria-hidden className="block text-6xl">💞</span>
-          <h2 className="mt-3 text-3xl font-black">우리의 쿵짝 스코어</h2>
-          <p className="mt-2 text-sm font-black">{result.names.join(' × ')}</p>
-          <p className="mt-3 text-7xl font-black">{Math.round(result.score)}<span className="text-3xl">%</span></p>
+        <section className="relative mt-5 overflow-hidden rounded-3xl border-3 border-black bg-brand-mint p-5 text-center shadow-neo-lg">
+          <CelebrationParticles />
+          <motion.span animate={{ scale: [0, 1.25, 1], rotate: [0, -8, 5, 0] }} aria-hidden className="relative block text-6xl" initial={{ scale: 0 }} transition={{ delay: .25, duration: .7 }}>💞</motion.span>
+          <motion.h2 animate={{ opacity: 1, y: 0 }} className="relative mt-3 text-3xl font-black" initial={{ opacity: 0, y: 12 }} transition={{ delay: .4 }}>우리의 쿵짝 스코어</motion.h2>
+          <div className="relative mx-auto mt-5 flex max-w-xs items-center justify-center gap-3">
+            <ProfileBadge index={0} profile={result.profiles[0]} />
+            <motion.span animate={{ scale: [0, 1.35, 1] }} aria-hidden className="shrink-0 text-2xl font-black" initial={{ scale: 0 }} transition={{ delay: .8 }}>×</motion.span>
+            <ProfileBadge index={1} profile={result.profiles[1]} />
+          </div>
+          <motion.p animate={{ opacity: 1, scale: 1 }} className="relative mt-4 text-7xl font-black" initial={{ opacity: 0, scale: .65 }} transition={{ delay: .9, type: 'spring', stiffness: 240 }}>{Math.round(result.score)}<span className="text-3xl">%</span></motion.p>
           <p className="mt-3 font-black">{scoreSummary(result.score)}</p>
           <div className="mt-6 grid grid-cols-3 gap-2"><ResultStat color="bg-brand-yellow" label="완전 일치" value={`${result.exactMatches}개`} /><ResultStat color="bg-brand-blue" label="비슷한 답" value={`${result.closeMatches}개`} /><ResultStat color="bg-brand-pink" label="강한 공감" value={`${result.strongMatches}개`} /></div>
         </section>
@@ -130,6 +136,8 @@ function ResultDrawer({ onClose, result }: { onClose: () => void; result: CoOpHi
 }
 
 function scoreSummary(score: number) { return score >= 85 ? '말하지 않아도 통하는 텔레파시형' : score >= 70 ? '닮음과 다름이 균형 잡힌 단짝형' : score >= 50 ? '차이를 발견할수록 재밌는 탐험형' : '대화할수록 가까워지는 반전형'; }
+function ProfileBadge({ index, profile }: { index: number; profile: { name: string; avatarUrl: string } }) { return <motion.div animate={{ opacity: 1, x: 0, rotate: index === 0 ? -3 : 3 }} className="min-w-0 flex-1" initial={{ opacity: 0, x: index === 0 ? -40 : 40 }} transition={{ delay: .45 + index * .12, type: 'spring' }}><motion.div className="mx-auto size-20 overflow-hidden rounded-full border-3 border-black bg-white shadow-neo" whileHover={{ scale: 1.08, rotate: 0 }}><img alt={`${profile.name} 프로필`} className="size-full object-cover" src={profile.avatarUrl} /></motion.div><p className="mt-2 truncate rounded-full border-2 border-black bg-white px-2 py-1 text-xs font-black">{profile.name}</p></motion.div>; }
+function CelebrationParticles() { const colors = ['bg-brand-pink', 'bg-brand-yellow', 'bg-brand-blue', 'bg-white']; return <div aria-hidden className="pointer-events-none absolute inset-0">{Array.from({ length: 14 }, (_, index) => <motion.i animate={{ y: [0, 170], x: [0, index % 2 ? 18 : -18], rotate: [0, 240], opacity: [0, 1, 0] }} className={`absolute top-0 size-2 rounded-sm border border-black ${colors[index % colors.length]}`} initial={{ left: `${6 + index * 7}%`, y: -15, opacity: 0 }} key={index} transition={{ delay: .15 + index * .045, duration: 1.5, ease: 'easeOut' }} />)}</div>; }
 function ResultStat({ color, label, value }: { color: string; label: string; value: string }) { return <div className={`min-w-0 rounded-xl border-2 border-black p-2 ${color}`}><p className="text-lg font-black">{value}</p><p className="mt-1 text-[10px] font-black">{label}</p></div>; }
 function DateText({ value }: { value: string }) { return <p className="mt-1 text-xs font-bold text-neutral-500">{new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))}</p>; }
 function Empty({ text }: { text: string }) { return <div className="rounded-3xl border-3 border-black bg-white p-6 text-center font-bold shadow-neo">{text}</div>; }
