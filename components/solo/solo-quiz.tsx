@@ -64,18 +64,23 @@ function shuffle<T>(items: T[]) {
 }
 
 function selectBalancedQuestions(questionBank: Question[]) {
-  const selected = traitPairs.flatMap(([left, right]) => [left, right]).flatMap((trait) => {
-    const candidates = questionBank.filter((question) => question.positive_trait === trait);
-    if (candidates.length < QUESTIONS_PER_TRAIT) throw new Error(`${trait} 성향 문항이 부족합니다.`);
-    return shuffle(candidates).slice(0, QUESTIONS_PER_TRAIT);
-  });
+  const selected = traitPairs
+    .flatMap(([left, right]) => [left, right])
+    .flatMap((trait) => {
+      const candidates = questionBank.filter((question) => question.positive_trait === trait);
+      if (candidates.length < QUESTIONS_PER_TRAIT)
+        throw new Error(`${trait} 성향 문항이 부족합니다.`);
+      return shuffle(candidates).slice(0, QUESTIONS_PER_TRAIT);
+    });
   return shuffle(selected);
 }
 
 function calculateResult(answers: Record<string, Answer>) {
   const axisScores = Object.values(answers).reduce<Record<Dimension, number>>(
     (scores, answer) => {
-      const dimension = traitPairs.find(([left, right]) => left === answer.positiveTrait || right === answer.positiveTrait);
+      const dimension = traitPairs.find(
+        ([left, right]) => left === answer.positiveTrait || right === answer.positiveTrait,
+      );
       if (!dimension) return scores;
 
       const key = `${dimension[0]}${dimension[1]}` as Dimension;
@@ -94,7 +99,9 @@ function calculateResult(answers: Record<string, Answer>) {
   return {
     mbti: traits.join(''),
     traits,
-    confidence: Math.round(Object.values(axisScores).reduce((sum, score) => sum + Math.abs(score) / 12, 0) / 4 * 100),
+    confidence: Math.round(
+      (Object.values(axisScores).reduce((sum, score) => sum + Math.abs(score) / 12, 0) / 4) * 100,
+    ),
     axisScores,
     spectra: traitPairs.map(([left, right]) => {
       const score = axisScores[`${left}${right}` as Dimension];
@@ -112,7 +119,9 @@ export function SoloQuiz() {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedValue, setSelectedValue] = useState<LikertValue>();
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'analyzing' | 'completed'>('loading');
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'analyzing' | 'completed'>(
+    'loading',
+  );
   const [errorMessage, setErrorMessage] = useState('');
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
 
@@ -192,11 +201,20 @@ export function SoloQuiz() {
     const finishAnalysis = window.setTimeout(async () => {
       const finalResult = calculateResult(answers);
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       const resultId = window.crypto.randomUUID();
       const completedAt = new Date().toISOString();
-      saveLocalSoloResult({ id: resultId, mbti: finalResult.mbti, clarity: finalResult.confidence, axisScores: finalResult.axisScores, answers, completedAt });
+      saveLocalSoloResult({
+        id: resultId,
+        mbti: finalResult.mbti,
+        clarity: finalResult.confidence,
+        axisScores: finalResult.axisScores,
+        answers,
+        completedAt,
+      });
       if (user && !user.is_anonymous) {
         await supabase.from('solo_results').insert({
           id: resultId,
@@ -252,13 +270,23 @@ export function SoloQuiz() {
   }
 
   if (status === 'loading') {
-    return <StatusCard emoji="🧪" title="검사 도구를 준비하고 있어요" description="질문을 고르고 있어요. 잠시만 기다려 주세요." />;
+    return (
+      <StatusCard
+        emoji="🧪"
+        title="검사 도구를 준비하고 있어요"
+        description="질문을 고르고 있어요. 잠시만 기다려 주세요."
+      />
+    );
   }
 
   if (status === 'error') {
     return (
       <StatusCard emoji="🥲" title="문항을 불러오지 못했어요" description={errorMessage}>
-        <button className="neo-button mt-6 w-full bg-brand-yellow" onClick={() => void loadQuestions()} type="button">
+        <button
+          className="neo-button mt-6 w-full bg-brand-yellow"
+          onClick={() => void loadQuestions()}
+          type="button"
+        >
           다시 시도하기
         </button>
       </StatusCard>
@@ -267,11 +295,31 @@ export function SoloQuiz() {
 
   if (status === 'analyzing') {
     return (
-      <motion.section className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-7 text-center shadow-neo-lg" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}>
-        <motion.div aria-hidden className="text-7xl" animate={{ rotate: [0, -10, 12, 0], scale: [1, 1.08, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>🧪</motion.div>
+      <motion.section
+        className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-7 text-center shadow-neo-lg"
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+      >
+        <motion.div
+          aria-hidden
+          className="text-7xl"
+          animate={{ rotate: [0, -10, 12, 0], scale: [1, 1.08, 1] }}
+          transition={{ duration: 1.2, repeat: Infinity }}
+        >
+          🧪
+        </motion.div>
         <h1 className="mt-6 text-3xl font-black">성향 신호를 분석 중이에요</h1>
-        <p className="mt-3 text-sm font-semibold leading-6">24개 답변의 방향과 강도를 교차 분석하고 있어요.</p>
-        <div className="mt-7 h-4 overflow-hidden rounded-full border-3 border-black bg-white"><motion.div className="h-full bg-brand-pink" initial={{ width: '8%' }} animate={{ width: '100%' }} transition={{ duration: 2.1, ease: 'easeInOut' }} /></div>
+        <p className="mt-3 text-sm font-semibold leading-6">
+          24개 답변의 방향과 강도를 교차 분석하고 있어요.
+        </p>
+        <div className="mt-7 h-4 overflow-hidden rounded-full border-3 border-black bg-white">
+          <motion.div
+            className="h-full bg-brand-pink"
+            initial={{ width: '8%' }}
+            animate={{ width: '100%' }}
+            transition={{ duration: 2.1, ease: 'easeInOut' }}
+          />
+        </div>
       </motion.section>
     );
   }
@@ -290,18 +338,27 @@ export function SoloQuiz() {
             <h1 className="mt-1 text-5xl font-black tracking-tight">{result.mbti}</h1>
             <p className="mt-2 text-xs font-black">결과 확신도 {result.confidence}%</p>
           </div>
-          <span aria-hidden className="text-6xl">🧠</span>
+          <span aria-hidden className="text-6xl">
+            🧠
+          </span>
         </div>
 
         <div className="mt-7 space-y-4">
           {result.spectra.map(({ left, right, leftPercent, clarity }) => (
             <div key={`${left}${right}`}>
               <div className="mb-1 flex justify-between text-xs font-black">
-                <span>{left} {leftPercent}%</span>
-                <span>{clarity} · {100 - leftPercent}% {right}</span>
+                <span>
+                  {left} {leftPercent}%
+                </span>
+                <span>
+                  {clarity} · {100 - leftPercent}% {right}
+                </span>
               </div>
               <div className="h-4 overflow-hidden rounded-full border-2 border-black bg-brand-blue">
-                <div className="h-full border-r-2 border-black bg-brand-pink" style={{ width: `${leftPercent}%` }} />
+                <div
+                  className="h-full border-r-2 border-black bg-brand-pink"
+                  style={{ width: `${leftPercent}%` }}
+                />
               </div>
             </div>
           ))}
@@ -310,13 +367,27 @@ export function SoloQuiz() {
         <div className="mt-7 rounded-2xl border-3 border-black bg-white p-4">
           <h2 className="font-black">연애 사용 설명서</h2>
           <ul className="mt-3 space-y-2 text-sm font-semibold leading-6">
-            {result.traits.map((trait) => <li key={trait}>• {traitGuide[trait]}</li>)}
+            {result.traits.map((trait) => (
+              <li key={trait}>• {traitGuide[trait]}</li>
+            ))}
           </ul>
         </div>
 
-        <button className="neo-button mt-6 w-full bg-brand-yellow" onClick={restart} type="button">새 질문으로 다시 검사하기</button>
-        <Link className="mt-4 block text-center text-sm font-black underline underline-offset-4" href="/mypage?tab=solo">내 Solo 기록 보기</Link>
-        <Link className="mt-4 block text-center text-sm font-black underline underline-offset-4" href="/">홈으로 돌아가기</Link>
+        <button className="neo-button mt-6 w-full bg-brand-yellow" onClick={restart} type="button">
+          새 질문으로 다시 검사하기
+        </button>
+        <Link
+          className="mt-4 block text-center text-sm font-black underline underline-offset-4"
+          href="/mypage?tab=solo"
+        >
+          내 Solo 기록 보기
+        </Link>
+        <Link
+          className="mt-4 block text-center text-sm font-black underline underline-offset-4"
+          href="/"
+        >
+          홈으로 돌아가기
+        </Link>
       </motion.section>
     );
   }
@@ -326,8 +397,16 @@ export function SoloQuiz() {
   return (
     <section className="w-full">
       <div className="flex items-center justify-between px-1 text-sm font-black">
-        <button className="underline underline-offset-4" onClick={() => setShowExitConfirmation(true)} type="button">← 나가기</button>
-        <span>{currentIndex + 1} / {questions.length}</span>
+        <button
+          className="underline underline-offset-4"
+          onClick={() => setShowExitConfirmation(true)}
+          type="button"
+        >
+          ← 나가기
+        </button>
+        <span>
+          {currentIndex + 1} / {questions.length}
+        </span>
       </div>
       <div className="mt-3 h-4 overflow-hidden rounded-full border-3 border-black bg-white">
         <motion.div
@@ -346,7 +425,9 @@ export function SoloQuiz() {
           initial={{ opacity: 0, x: 32, rotate: 1 }}
           key={question.id}
         >
-          <h1 className="flex min-h-44 items-center justify-center text-center text-2xl font-black leading-9">{question.title}</h1>
+          <h1 className="flex min-h-44 items-center justify-center text-center text-2xl font-black leading-9">
+            {question.title}
+          </h1>
           <div className="mt-7 border-t-3 border-black pt-7">
             <LikertScale onChange={setSelectedValue} value={selectedValue} />
           </div>
@@ -375,7 +456,12 @@ export function SoloQuiz() {
   );
 }
 
-function StatusCard({ children, description, emoji, title }: {
+function StatusCard({
+  children,
+  description,
+  emoji,
+  title,
+}: {
   children?: React.ReactNode;
   description: string;
   emoji: string;
@@ -383,7 +469,9 @@ function StatusCard({ children, description, emoji, title }: {
 }) {
   return (
     <section className="w-full rounded-3xl border-3 border-black bg-brand-pink p-6 text-center shadow-neo-lg">
-      <span aria-hidden className="text-6xl">{emoji}</span>
+      <span aria-hidden className="text-6xl">
+        {emoji}
+      </span>
       <h1 className="mt-5 text-2xl font-black">{title}</h1>
       <p className="mt-3 text-sm font-semibold leading-6">{description}</p>
       {children}

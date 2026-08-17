@@ -35,26 +35,25 @@
 - 프로필, 가입일, 최근 로그인, Solo·2인 플레이 기록 제공
 - 개인정보처리방침과 이용약관을 포함한 공통 푸터 제공
 
-## v2 로드맵 — 사랑의 판결 받기
+## v2 — 사랑의 판결 받기
 
 두 사람의 갈등이나 고민을 여러 사람과 함께 유쾌하게 풀어보는 콘텐츠입니다.
 
-- 사건 개요와 원고·피고 주장 작성
-- 지인·커뮤니티 사용자를 링크로 초대
-- 다수 참여자의 투표와 의견 수집
-- 최종 판결문과 합의 가이드 생성
-- 추후 공개 재판소, UGC, 신고·운영 기능 확장
-
-현재 랜딩 페이지에서는 Coming Soon 카드로만 제공합니다.
+- 운영자가 준비한 사건 12종 또는 사용자가 직접 작성한 사건으로 재판 생성
+- 초대 링크를 통한 다수 배심원 투표와 선택 의견 수집
+- 사건 작성자만 중간 집계를 보고 투표를 종료하는 비공개 재판
+- 사용자 사건은 관리자 승인 후에만 공개 가능한 검수 구조
+- 관리자 전용 승인·반려·숨김 처리 화면과 처리 이력 저장
+- 추후 공개 재판소, 신고, 최종 판결문과 합의 가이드 확장
 
 ## 기술 스택
 
-| 영역 | 기술 |
-| --- | --- |
-| Web | Next.js App Router, React, TypeScript |
-| UI | Tailwind CSS, Framer Motion |
+| 영역    | 기술                                   |
+| ------- | -------------------------------------- |
+| Web     | Next.js App Router, React, TypeScript  |
+| UI      | Tailwind CSS, Framer Motion            |
 | Backend | Supabase Postgres, Auth, Realtime, RLS |
-| Deploy | Vercel, GitHub Actions |
+| Deploy  | Vercel, GitHub Actions                 |
 
 ## 로컬 실행
 
@@ -87,4 +86,4 @@ NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY=
 
 ## 만든 사람
 
-박재희 · [GitHub](https://github.com/wogml3270/kungjjak-lab) · [Blog](https://j-fe-blog.vercel.app/)
+박재희 · [GitHub](https://github.com/wogml3270/) · [Blog](https://j-fe-blog.vercel.app/)

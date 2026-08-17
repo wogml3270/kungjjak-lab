@@ -50,8 +50,14 @@ export function ServiceCard({
 
   if (!href) {
     return (
-      <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }}>
-        <article aria-disabled="true" className={`${className} cursor-not-allowed opacity-60`}>{content}</article>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+      >
+        <article aria-disabled="true" className={`${className} cursor-not-allowed opacity-60`}>
+          {content}
+        </article>
       </motion.div>
     );
   }
@@ -64,7 +70,9 @@ export function ServiceCard({
       whileTap={{ scale: 0.98 }}
       viewport={{ once: true, amount: 0.2 }}
     >
-      <Link className={className} href={href}>{content}</Link>
+      <Link className={className} href={href}>
+        {content}
+      </Link>
     </motion.div>
   );
 }

@@ -9,18 +9,35 @@ import { ensureAnonymousSession } from '@/lib/supabase/anonymous';
 import { createClient } from '@/lib/supabase/client';
 import { normalizeProfileImage } from '@/lib/profile-image';
 
-type Room = { id: string; code: string; status: string; host_user_id: string; current_question: number };
-type Participant = { id: string; user_id: string; role: 'host' | 'guest'; is_ready: boolean; display_name: string | null; avatar_url: string | null };
+type Room = {
+  id: string;
+  code: string;
+  status: string;
+  host_user_id: string;
+  current_question: number;
+};
+type Participant = {
+  id: string;
+  user_id: string;
+  role: 'host' | 'guest';
+  is_ready: boolean;
+  display_name: string | null;
+  avatar_url: string | null;
+};
 
 function roomEntryMessage(cause: unknown) {
-  const message = cause instanceof Error
-    ? cause.message
-    : typeof cause === 'object' && cause && 'message' in cause
-      ? String(cause.message)
-      : String(cause);
-  if (/Authentication|required|JWT|session/i.test(message)) return '익명 참여 세션을 만들지 못했어요. 페이지를 새로고침해 다시 시도해 주세요.';
-  if (/duplicate|unique|already|unavailable/i.test(message)) return '이미 두 명이 참여한 방이에요. 방장에게 새 초대 링크를 요청해 주세요.';
-  if (/not found/i.test(message)) return '존재하지 않거나 만료된 방이에요. 방 코드를 다시 확인해 주세요.';
+  const message =
+    cause instanceof Error
+      ? cause.message
+      : typeof cause === 'object' && cause && 'message' in cause
+        ? String(cause.message)
+        : String(cause);
+  if (/Authentication|required|JWT|session/i.test(message))
+    return '익명 참여 세션을 만들지 못했어요. 페이지를 새로고침해 다시 시도해 주세요.';
+  if (/duplicate|unique|already|unavailable/i.test(message))
+    return '이미 두 명이 참여한 방이에요. 방장에게 새 초대 링크를 요청해 주세요.';
+  if (/not found/i.test(message))
+    return '존재하지 않거나 만료된 방이에요. 방 코드를 다시 확인해 주세요.';
   return '방에 입장하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.';
 }
 
@@ -42,27 +59,43 @@ export function CoOpLobby({ code }: { code: string }) {
     async function resolveName() {
       const recentName = (window.localStorage.getItem('kungjjak_co_op_name') ?? '').slice(0, 10);
       setSuggestedName(recentName);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!active) return;
       if (user && !user.is_anonymous) {
-        setDisplayName(String(user.user_metadata.service_nickname ?? user.user_metadata.full_name ?? user.user_metadata.name ?? '쿵짝 연구원').trim().slice(0, 10));
+        setDisplayName(
+          String(
+            user.user_metadata.service_nickname ??
+              user.user_metadata.full_name ??
+              user.user_metadata.name ??
+              '쿵짝 연구원',
+          )
+            .trim()
+            .slice(0, 10),
+        );
       } else {
         setDisplayName(window.sessionStorage.getItem(`kungjjak_co_op_name:${code}`));
       }
     }
     resolveName();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [code, supabase]);
 
-  const loadParticipants = useCallback(async (roomId: string) => {
-    const { data, error: participantError } = await supabase
-      .from('participants')
-      .select('id, user_id, role, is_ready, display_name, avatar_url')
-      .eq('room_id', roomId)
-      .order('joined_at');
-    if (participantError) throw participantError;
-    setParticipants((data ?? []) as Participant[]);
-  }, [supabase]);
+  const loadParticipants = useCallback(
+    async (roomId: string) => {
+      const { data, error: participantError } = await supabase
+        .from('participants')
+        .select('id, user_id, role, is_ready, display_name, avatar_url')
+        .eq('room_id', roomId)
+        .order('joined_at');
+      if (participantError) throw participantError;
+      setParticipants((data ?? []) as Participant[]);
+    },
+    [supabase],
+  );
 
   useEffect(() => {
     let active = true;
@@ -71,9 +104,22 @@ export function CoOpLobby({ code }: { code: string }) {
       if (!displayName) return;
       try {
         const currentUserId = await ensureAnonymousSession();
-        const { data: { user } } = await supabase.auth.getUser();
-        const playName = user && !user.is_anonymous ? String(user.user_metadata.service_nickname ?? user.user_metadata.full_name ?? user.user_metadata.name ?? displayName).slice(0, 10) : displayName;
-        const avatarUrl = user && !user.is_anonymous ? normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture) : '/default-profile.svg';
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const playName =
+          user && !user.is_anonymous
+            ? String(
+                user.user_metadata.service_nickname ??
+                  user.user_metadata.full_name ??
+                  user.user_metadata.name ??
+                  displayName,
+              ).slice(0, 10)
+            : displayName;
+        const avatarUrl =
+          user && !user.is_anonymous
+            ? normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture)
+            : '/default-profile.svg';
         if (!active) return;
         setUserId(currentUserId);
 
@@ -84,10 +130,15 @@ export function CoOpLobby({ code }: { code: string }) {
           .maybeSingle();
 
         if (!foundRoom) {
-          const { data: joined, error: joinError } = await supabase.rpc('join_room', { room_code: code });
+          const { data: joined, error: joinError } = await supabase.rpc('join_room', {
+            room_code: code,
+          });
           if (joinError) throw joinError;
           const participant = Array.isArray(joined) ? joined[0] : joined;
-          await supabase.from('participants').update({ display_name: playName, avatar_url: avatarUrl }).eq('id', participant.id);
+          await supabase
+            .from('participants')
+            .update({ display_name: playName, avatar_url: avatarUrl })
+            .eq('id', participant.id);
           const { data, error: roomError } = await supabase
             .from('rooms')
             .select('id, code, status, host_user_id, current_question')
@@ -100,8 +151,21 @@ export function CoOpLobby({ code }: { code: string }) {
         if (!active) return;
         setRoom(foundRoom as Room);
         setMessage('상대방을 기다리고 있어요.');
-        const existingParticipant = await supabase.from('participants').select('id, display_name, avatar_url').eq('room_id', foundRoom.id).eq('user_id', currentUserId).maybeSingle();
-        if (existingParticipant.data && (existingParticipant.data.display_name !== playName || existingParticipant.data.avatar_url !== avatarUrl)) await supabase.from('participants').update({ display_name: playName, avatar_url: avatarUrl }).eq('id', existingParticipant.data.id);
+        const existingParticipant = await supabase
+          .from('participants')
+          .select('id, display_name, avatar_url')
+          .eq('room_id', foundRoom.id)
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+        if (
+          existingParticipant.data &&
+          (existingParticipant.data.display_name !== playName ||
+            existingParticipant.data.avatar_url !== avatarUrl)
+        )
+          await supabase
+            .from('participants')
+            .update({ display_name: playName, avatar_url: avatarUrl })
+            .eq('id', existingParticipant.data.id);
         await loadParticipants(foundRoom.id);
       } catch (cause) {
         console.error('[co-op] room entry failed', cause);
@@ -111,16 +175,22 @@ export function CoOpLobby({ code }: { code: string }) {
     }
 
     enterRoom();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [code, displayName, loadParticipants, supabase]);
 
   useEffect(() => {
     if (!room) return;
     const channel = supabase
       .channel(`room:${room.id}:lobby`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `room_id=eq.${room.id}` }, () => {
-        loadParticipants(room.id).catch(console.error);
-      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'participants', filter: `room_id=eq.${room.id}` },
+        () => {
+          loadParticipants(room.id).catch(console.error);
+        },
+      )
       .subscribe();
 
     const fallback = window.setInterval(() => loadParticipants(room.id).catch(console.error), 4000);
@@ -134,16 +204,26 @@ export function CoOpLobby({ code }: { code: string }) {
     if (!room) return;
     const roomChannel = supabase
       .channel(`room:${room.id}:state`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` }, (payload) => {
-        setRoom(payload.new as Room);
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` }, () => {
-        setRoom(null);
-        setParticipants([]);
-        setError('상대방이 나가서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.');
-      })
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` },
+        (payload) => {
+          setRoom(payload.new as Room);
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` },
+        () => {
+          setRoom(null);
+          setParticipants([]);
+          setError('상대방이 나가서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.');
+        },
+      )
       .subscribe();
-    return () => { supabase.removeChannel(roomChannel); };
+    return () => {
+      supabase.removeChannel(roomChannel);
+    };
   }, [room?.id, supabase]);
 
   useEffect(() => {
@@ -166,9 +246,15 @@ export function CoOpLobby({ code }: { code: string }) {
       if (!roomWasFullRef.current || presenceClosureStartedRef.current) return;
       if (disconnectTimer) window.clearTimeout(disconnectTimer);
       disconnectTimer = window.setTimeout(async () => {
-        if (Object.keys(presenceChannel.presenceState()).length >= 2 || presenceClosureStartedRef.current) return;
+        if (
+          Object.keys(presenceChannel.presenceState()).length >= 2 ||
+          presenceClosureStartedRef.current
+        )
+          return;
         presenceClosureStartedRef.current = true;
-        const { error: closeError } = await supabase.rpc('leave_co_op_room', { target_room_id: activeRoomId });
+        const { error: closeError } = await supabase.rpc('leave_co_op_room', {
+          target_room_id: activeRoomId,
+        });
         if (closeError) presenceClosureStartedRef.current = false;
         else {
           setRoom(null);
@@ -178,13 +264,14 @@ export function CoOpLobby({ code }: { code: string }) {
       }, 5000);
     }
 
-    presenceChannel
-      .on('presence', { event: 'sync' }, checkPresence)
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await presenceChannel.track({ participantId: userId, connectedAt: new Date().toISOString() });
-        }
-      });
+    presenceChannel.on('presence', { event: 'sync' }, checkPresence).subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await presenceChannel.track({
+          participantId: userId,
+          connectedAt: new Date().toISOString(),
+        });
+      }
+    });
 
     return () => {
       if (disconnectTimer) window.clearTimeout(disconnectTimer);
@@ -197,7 +284,11 @@ export function CoOpLobby({ code }: { code: string }) {
   const isFull = participants.length === 2;
 
   async function shareInvite() {
-    const shareData = { title: '쿵짝랩 초대장', text: `나와 함께 2인 쿵짝 실험할래?\n${inviteUrl}`, url: inviteUrl };
+    const shareData = {
+      title: '쿵짝랩 초대장',
+      text: `나와 함께 2인 쿵짝 실험할래?\n${inviteUrl}`,
+      url: inviteUrl,
+    };
     try {
       if (navigator.share) await navigator.share(shareData);
       else {
@@ -205,7 +296,8 @@ export function CoOpLobby({ code }: { code: string }) {
         setMessage('초대 링크를 복사했어요!');
       }
     } catch (cause) {
-      if ((cause as DOMException).name !== 'AbortError') setMessage('공유하지 못했어요. 다시 시도해 주세요.');
+      if ((cause as DOMException).name !== 'AbortError')
+        setMessage('공유하지 못했어요. 다시 시도해 주세요.');
     }
   }
 
@@ -227,7 +319,9 @@ export function CoOpLobby({ code }: { code: string }) {
           imageUrl: `${window.location.origin}/opengraph-image`,
           link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl },
         },
-        buttons: [{ title: '2인 쿵짝 실험 참여하기', link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl } }],
+        buttons: [
+          { title: '2인 쿵짝 실험 참여하기', link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl } },
+        ],
       });
     } catch (cause) {
       console.error('[co-op] Kakao share failed', cause);
@@ -237,7 +331,9 @@ export function CoOpLobby({ code }: { code: string }) {
 
   async function startExperiment() {
     if (!room || !isHost || !isFull) return;
-    const { data, error: startError } = await supabase.rpc('start_co_op_room', { target_room_id: room.id });
+    const { data, error: startError } = await supabase.rpc('start_co_op_room', {
+      target_room_id: room.id,
+    });
     if (startError) {
       await loadParticipants(room.id).catch(() => setParticipants([]));
       setMessage('두 사람이 모두 방에 있어야 시작할 수 있어요.');
@@ -245,7 +341,8 @@ export function CoOpLobby({ code }: { code: string }) {
   }
 
   async function leaveRoom() {
-    if (!room || !window.confirm('방을 나가면 두 사람의 진행 중인 방이 종료돼요. 나갈까요?')) return;
+    if (!room || !window.confirm('방을 나가면 두 사람의 진행 중인 방이 종료돼요. 나갈까요?'))
+      return;
     await supabase.rpc('leave_co_op_room', { target_room_id: room.id });
     window.sessionStorage.removeItem(`kungjjak_co_op_name:${code}`);
     router.replace('/co-op');
@@ -253,68 +350,199 @@ export function CoOpLobby({ code }: { code: string }) {
 
   if (room && ['in_progress', 'calculating', 'completed'].includes(room.status)) {
     const me = participants.find((participant) => participant.user_id === userId);
-    if (me) return <CoOpExperiment onLeave={leaveRoom} participant={me} participants={participants} room={room} />;
+    if (me)
+      return (
+        <CoOpExperiment
+          onLeave={leaveRoom}
+          participant={me}
+          participants={participants}
+          room={room}
+        />
+      );
   }
 
-  if (displayName === null) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><form className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const name = String(form.get('name') ?? '').trim(); if (name && name.length <= 10) { window.localStorage.setItem('kungjjak_co_op_name', name); window.sessionStorage.setItem(`kungjjak_co_op_name:${code}`, name); setDisplayName(name); } }}><p className="text-xs font-black tracking-widest">GUEST NAME</p><h1 className="mt-2 text-2xl font-black">임시 이름을 정해 주세요</h1><p className="mt-2 text-sm font-semibold">비로그인 참여에만 사용하는 이름이에요. 로그인하면 서비스 닉네임이 자동으로 적용돼요.</p><input autoFocus className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo" defaultValue={suggestedName.slice(0, 10)} maxLength={10} name="name" placeholder="예: 재희 (최대 10자)" required /><button className="neo-button mt-4 w-full bg-brand-mint" type="submit">이 이름으로 입장하기</button></form></main>;
-  if (displayName === undefined) return <main className="mx-auto flex min-h-screen max-w-md items-center px-5"><p className="font-black">초대장을 확인하고 있어요…</p></main>;
+  if (displayName === null)
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md items-center px-5">
+        <form
+          className="w-full rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            const name = String(form.get('name') ?? '').trim();
+            if (name && name.length <= 10) {
+              window.localStorage.setItem('kungjjak_co_op_name', name);
+              window.sessionStorage.setItem(`kungjjak_co_op_name:${code}`, name);
+              setDisplayName(name);
+            }
+          }}
+        >
+          <p className="text-xs font-black tracking-widest">GUEST NAME</p>
+          <h1 className="mt-2 text-2xl font-black">임시 이름을 정해 주세요</h1>
+          <p className="mt-2 text-sm font-semibold">
+            비로그인 참여에만 사용하는 이름이에요. 로그인하면 서비스 닉네임이 자동으로 적용돼요.
+          </p>
+          <input
+            autoFocus
+            className="mt-5 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo"
+            defaultValue={suggestedName.slice(0, 10)}
+            maxLength={10}
+            name="name"
+            placeholder="예: 재희 (최대 10자)"
+            required
+          />
+          <button className="neo-button mt-4 w-full bg-brand-mint" type="submit">
+            이 이름으로 입장하기
+          </button>
+        </form>
+      </main>
+    );
+  if (displayName === undefined)
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md items-center px-5">
+        <p className="font-black">초대장을 확인하고 있어요…</p>
+      </main>
+    );
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
-      <motion.section animate={{ opacity: 1, scale: 1 }} className="w-full rounded-3xl border-3 border-black bg-white p-6 shadow-neo-lg" initial={{ opacity: 0, scale: 0.96 }}>
+      <motion.section
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full rounded-3xl border-3 border-black bg-white p-6 shadow-neo-lg"
+        initial={{ opacity: 0, scale: 0.96 }}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black tracking-widest">2-PERSON LOBBY</p>
             <h1 className="mt-2 text-3xl font-black">쿵짝 실험 대기실</h1>
           </div>
-          <motion.span animate={{ y: [0, -7, 0] }} aria-hidden className="text-4xl" transition={{ duration: 1.5, repeat: Infinity }}>🫶</motion.span>
+          <motion.span
+            animate={{ y: [0, -7, 0] }}
+            aria-hidden
+            className="text-4xl"
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            🫶
+          </motion.span>
         </div>
 
         {error ? (
           <div className="mt-6 rounded-2xl border-3 border-black bg-brand-pink p-4">
-            <p className="font-black" role="alert">{error}</p>
-            <Link className="neo-button mt-4 inline-flex items-center bg-white" href="/co-op">다른 방 찾기</Link>
+            <p className="font-black" role="alert">
+              {error}
+            </p>
+            <Link className="neo-button mt-4 inline-flex items-center bg-white" href="/co-op">
+              다른 방 찾기
+            </Link>
           </div>
         ) : (
           <>
             <div className="mt-6 rounded-2xl border-3 border-black bg-brand-yellow p-5 text-center shadow-neo">
               <p className="text-xs font-black">ROOM CODE</p>
-              <p className="mt-1 text-4xl font-black tracking-[0.25em]" aria-label={`방 코드 ${code}`}>{code}</p>
+              <p
+                className="mt-1 text-4xl font-black tracking-[0.25em]"
+                aria-label={`방 코드 ${code}`}
+              >
+                {code}
+              </p>
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               {[0, 1].map((index) => {
                 const participant = participants[index];
                 return (
-                  <motion.div key={participant?.id ?? index} animate={{ opacity: 1, y: 0 }} className={`rounded-2xl border-3 border-black p-4 text-center ${participant ? 'bg-brand-mint' : 'bg-neutral-100'}`} initial={{ opacity: 0, y: 12 }}>
-                    <span aria-hidden className="text-3xl">{participant ? (participant.user_id === userId ? '🙋' : '🙌') : '⏳'}</span>
-                    <p className="mt-2 text-sm font-black">{participant ? `${participant.display_name ?? (participant.user_id === userId ? '나' : '상대방')}${participant.user_id === userId ? ' (나)' : ''}` : '자리 비어 있음'}</p>
-                    <p className="mt-1 text-xs font-bold">{participant ? '입장 완료' : '기다리는 중'}</p>
+                  <motion.div
+                    key={participant?.id ?? index}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-2xl border-3 border-black p-4 text-center ${participant ? 'bg-brand-mint' : 'bg-neutral-100'}`}
+                    initial={{ opacity: 0, y: 12 }}
+                  >
+                    <span aria-hidden className="text-3xl">
+                      {participant ? (participant.user_id === userId ? '🙋' : '🙌') : '⏳'}
+                    </span>
+                    <p className="mt-2 text-sm font-black">
+                      {participant
+                        ? `${participant.display_name ?? (participant.user_id === userId ? '나' : '상대방')}${participant.user_id === userId ? ' (나)' : ''}`
+                        : '자리 비어 있음'}
+                    </p>
+                    <p className="mt-1 text-xs font-bold">
+                      {participant ? '입장 완료' : '기다리는 중'}
+                    </p>
                   </motion.div>
                 );
               })}
             </div>
 
             <AnimatePresence mode="wait">
-              <motion.p key={isFull ? 'full' : message} animate={{ opacity: 1 }} className="mt-5 text-center font-black" exit={{ opacity: 0 }} initial={{ opacity: 0 }} role="status">
+              <motion.p
+                key={isFull ? 'full' : message}
+                animate={{ opacity: 1 }}
+                className="mt-5 text-center font-black"
+                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }}
+                role="status"
+              >
                 {isFull ? '두 사람이 모두 모였어요! 🎉' : message}
               </motion.p>
             </AnimatePresence>
 
             {isHost && !isFull ? (
               <div className="mt-5 grid gap-3">
-                <button className="neo-button w-full bg-[#FEE500]" onClick={shareToKakao} type="button">카카오톡으로 초대하기</button>
-                <button className="neo-button w-full bg-brand-blue" onClick={shareInvite} type="button">다른 앱으로 공유하기</button>
-                <button className="neo-button w-full bg-white" onClick={async () => { await navigator.clipboard.writeText(inviteUrl); setMessage('초대 링크를 복사했어요!'); }} type="button">초대 링크 복사하기</button>
+                <button
+                  className="neo-button w-full bg-[#FEE500]"
+                  onClick={shareToKakao}
+                  type="button"
+                >
+                  카카오톡으로 초대하기
+                </button>
+                <button
+                  className="neo-button w-full bg-brand-blue"
+                  onClick={shareInvite}
+                  type="button"
+                >
+                  다른 앱으로 공유하기
+                </button>
+                <button
+                  className="neo-button w-full bg-white"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(inviteUrl);
+                    setMessage('초대 링크를 복사했어요!');
+                  }}
+                  type="button"
+                >
+                  초대 링크 복사하기
+                </button>
               </div>
             ) : null}
-            {isHost && isFull ? <button className="neo-button mt-5 w-full bg-brand-pink" onClick={startExperiment} type="button">24문항 실험 시작하기</button> : null}
-            {!isHost && room ? <p className="mt-5 rounded-xl border-2 border-black bg-brand-blue p-3 text-center text-sm font-bold">방장이 실험을 시작할 때까지 잠시 기다려 주세요.</p> : null}
-            <p className="mt-4 rounded-xl border-2 border-black bg-brand-mint p-3 text-center text-xs font-bold">비로그인 참여도 가능하지만, 로그인해야 완료 기록을 마이페이지에서 다시 볼 수 있어요.</p>
+            {isHost && isFull ? (
+              <button
+                className="neo-button mt-5 w-full bg-brand-pink"
+                onClick={startExperiment}
+                type="button"
+              >
+                24문항 실험 시작하기
+              </button>
+            ) : null}
+            {!isHost && room ? (
+              <p className="mt-5 rounded-xl border-2 border-black bg-brand-blue p-3 text-center text-sm font-bold">
+                방장이 실험을 시작할 때까지 잠시 기다려 주세요.
+              </p>
+            ) : null}
+            <p className="mt-4 rounded-xl border-2 border-black bg-brand-mint p-3 text-center text-xs font-bold">
+              비로그인 참여도 가능하지만, 로그인해야 완료 기록을 마이페이지에서 다시 볼 수 있어요.
+            </p>
           </>
         )}
 
-        {room && !error ? <button className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4" onClick={leaveRoom} type="button">← 대기실 나가기</button> : null}
+        {room && !error ? (
+          <button
+            className="mt-6 inline-flex font-black underline decoration-2 underline-offset-4"
+            onClick={leaveRoom}
+            type="button"
+          >
+            ← 대기실 나가기
+          </button>
+        ) : null}
       </motion.section>
     </main>
   );
@@ -327,7 +555,9 @@ type KakaoSdk = {
 };
 
 declare global {
-  interface Window { Kakao?: KakaoSdk }
+  interface Window {
+    Kakao?: KakaoSdk;
+  }
 }
 
 let kakaoSdkPromise: Promise<KakaoSdk> | null = null;
@@ -338,7 +568,8 @@ function loadKakaoSdk() {
     const script = document.createElement('script');
     script.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js';
     script.crossOrigin = 'anonymous';
-    script.onload = () => window.Kakao ? resolve(window.Kakao) : reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
+    script.onload = () =>
+      window.Kakao ? resolve(window.Kakao) : reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
     script.onerror = () => reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
     document.head.appendChild(script);
   });

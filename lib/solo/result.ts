@@ -18,7 +18,7 @@ export function saveLocalSoloResult(result: SoloResult) {
 export function readLocalSoloResult(id: string): SoloResult | null {
   try {
     const raw = window.localStorage.getItem(`${SOLO_RESULT_PREFIX}${id}`);
-    return raw ? JSON.parse(raw) as SoloResult : null;
+    return raw ? (JSON.parse(raw) as SoloResult) : null;
   } catch {
     return null;
   }

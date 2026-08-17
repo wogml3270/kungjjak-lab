@@ -16,11 +16,26 @@ const options: Array<{
   size: string;
   value: LikertValue;
 }> = [
-  { value: 2, label: '매우 그렇다', shortLabel: '매우\n그렇다', size: 'size-[clamp(2.75rem,14vw,4rem)]' },
+  {
+    value: 2,
+    label: '매우 그렇다',
+    shortLabel: '매우\n그렇다',
+    size: 'size-[clamp(2.75rem,14vw,4rem)]',
+  },
   { value: 1, label: '그렇다', shortLabel: '그렇다', size: 'size-[clamp(2.4rem,11.5vw,3.25rem)]' },
   { value: 0, label: '보통', shortLabel: '보통', size: 'size-[clamp(2rem,9vw,2.5rem)]' },
-  { value: -1, label: '그렇지 않다', shortLabel: '그렇지\n않다', size: 'size-[clamp(2.4rem,11.5vw,3.25rem)]' },
-  { value: -2, label: '매우 그렇지 않다', shortLabel: '매우 그렇지\n않다', size: 'size-[clamp(2.75rem,14vw,4rem)]' },
+  {
+    value: -1,
+    label: '그렇지 않다',
+    shortLabel: '그렇지\n않다',
+    size: 'size-[clamp(2.4rem,11.5vw,3.25rem)]',
+  },
+  {
+    value: -2,
+    label: '매우 그렇지 않다',
+    shortLabel: '매우 그렇지\n않다',
+    size: 'size-[clamp(2.75rem,14vw,4rem)]',
+  },
 ];
 
 export function LikertScale({ disabled = false, onChange, value }: LikertScaleProps) {
@@ -34,7 +49,10 @@ export function LikertScale({ disabled = false, onChange, value }: LikertScalePr
           const negative = option.value < 0;
 
           return (
-            <label className="flex min-w-0 cursor-pointer flex-col items-center gap-3" key={option.value}>
+            <label
+              className="flex min-w-0 cursor-pointer flex-col items-center gap-3"
+              key={option.value}
+            >
               <input
                 checked={selected}
                 className="peer sr-only"
@@ -45,8 +63,10 @@ export function LikertScale({ disabled = false, onChange, value }: LikertScalePr
               />
               <motion.span
                 aria-hidden
-                animate={selected ? { scale: [1, 1.14, 1], rotate: [0, -3, 0] } : { scale: 1, rotate: 0 }}
-                className={`${option.size} rounded-full border-3 border-black shadow-neo transition-transform peer-focus-visible:outline peer-focus-visible:outline-3 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-black peer-checked:translate-x-1 peer-checked:translate-y-1 peer-checked:shadow-none ${
+                animate={
+                  selected ? { scale: [1, 1.14, 1], rotate: [0, -3, 0] } : { scale: 1, rotate: 0 }
+                }
+                className={`${option.size} peer-focus-visible:outline-3 rounded-full border-3 border-black shadow-neo transition-transform peer-checked:translate-x-1 peer-checked:translate-y-1 peer-checked:shadow-none peer-focus-visible:outline peer-focus-visible:outline-offset-4 peer-focus-visible:outline-black ${
                   selected
                     ? 'bg-brand-yellow'
                     : positive
@@ -66,7 +86,10 @@ export function LikertScale({ disabled = false, onChange, value }: LikertScalePr
           );
         })}
       </div>
-      <div aria-hidden className="mt-3 flex justify-between px-1 text-[10px] font-black text-neutral-500">
+      <div
+        aria-hidden
+        className="mt-3 flex justify-between px-1 text-[10px] font-black text-neutral-500"
+      >
         <span>동의</span>
         <span>비동의</span>
       </div>

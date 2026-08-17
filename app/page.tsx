@@ -7,14 +7,49 @@ import { NicknameOnboarding } from '@/components/profile/nickname-onboarding';
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const signedIn = Boolean(user && !user.is_anonymous);
   const profileImageCandidate = user?.user_metadata.avatar_url ?? user?.user_metadata.picture;
   const profileImage = normalizeProfileImage(profileImageCandidate);
   return (
     <main className="mx-auto min-h-screen max-w-md px-5 pb-12 pt-8">
-      {signedIn && !user?.user_metadata.service_nickname ? <NicknameOnboarding suggestedName={String(user?.user_metadata.full_name ?? user?.user_metadata.name ?? '')} /> : null}
-      <nav className="mb-5 flex items-center justify-end gap-3">{!signedIn ? <span className="login-nudge relative rounded-xl border-2 border-black bg-brand-mint px-3 py-2 text-xs font-black shadow-[2px_2px_0_#000] after:absolute after:-right-2 after:top-3 after:size-3 after:rotate-45 after:border-r-2 after:border-t-2 after:border-black after:bg-brand-mint">로그인하면 결과를 모아볼 수 있어요</span> : null}<Link aria-label={signedIn ? '마이페이지' : '로그인'} className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-white shadow-neo" href={signedIn ? '/mypage' : '/login'} title={signedIn ? '마이페이지' : '로그인'}>{signedIn ? <img alt="내 프로필" className="size-full object-cover" src={profileImage} /> : <svg aria-hidden="true" className="size-7" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none" /><g fill="currentColor"><path fillRule="evenodd" d="M22 8.293c0 3.476-2.83 6.294-6.32 6.294c-.636 0-2.086-.146-2.791-.732l-.882.878c-.519.517-.379.669-.148.919c.096.105.208.226.295.399c0 0 .735 1.024 0 2.049c-.441.585-1.676 1.404-3.086 0l-.294.292s.881 1.025.147 2.05c-.441.585-1.617 1.17-2.646.146l-1.028 1.024c-.706.703-1.568.293-1.91 0l-.883-.878c-.823-.82-.343-1.708 0-2.05l7.642-7.61s-.735-1.17-.735-2.78c0-3.476 2.83-6.294 6.32-6.294S22 4.818 22 8.293" clipRule="evenodd" opacity=".5" /><path d="M17.885 8.294a2.2 2.2 0 0 1-2.204 2.195a2.2 2.2 0 0 1-2.204-2.195a2.2 2.2 0 0 1 2.204-2.196a2.2 2.2 0 0 1 2.204 2.196" /></g></svg>}</Link></nav>
+      {signedIn && !user?.user_metadata.service_nickname ? (
+        <NicknameOnboarding
+          suggestedName={String(user?.user_metadata.full_name ?? user?.user_metadata.name ?? '')}
+        />
+      ) : null}
+      <nav className="mb-5 flex items-center justify-end gap-3">
+        {!signedIn ? (
+          <span className="login-nudge relative rounded-xl border-2 border-black bg-brand-mint px-3 py-2 text-xs font-black shadow-[2px_2px_0_#000] after:absolute after:-right-2 after:top-3 after:size-3 after:rotate-45 after:border-r-2 after:border-t-2 after:border-black after:bg-brand-mint">
+            로그인하면 결과를 모아볼 수 있어요
+          </span>
+        ) : null}
+        <Link
+          aria-label={signedIn ? '마이페이지' : '로그인'}
+          className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-white shadow-neo"
+          href={signedIn ? '/mypage' : '/login'}
+          title={signedIn ? '마이페이지' : '로그인'}
+        >
+          {signedIn ? (
+            <img alt="내 프로필" className="size-full object-cover" src={profileImage} />
+          ) : (
+            <svg aria-hidden="true" className="size-7" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none" />
+              <g fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M22 8.293c0 3.476-2.83 6.294-6.32 6.294c-.636 0-2.086-.146-2.791-.732l-.882.878c-.519.517-.379.669-.148.919c.096.105.208.226.295.399c0 0 .735 1.024 0 2.049c-.441.585-1.676 1.404-3.086 0l-.294.292s.881 1.025.147 2.05c-.441.585-1.617 1.17-2.646.146l-1.028 1.024c-.706.703-1.568.293-1.91 0l-.883-.878c-.823-.82-.343-1.708 0-2.05l7.642-7.61s-.735-1.17-.735-2.78c0-3.476 2.83-6.294 6.32-6.294S22 4.818 22 8.293"
+                  clipRule="evenodd"
+                  opacity=".5"
+                />
+                <path d="M17.885 8.294a2.2 2.2 0 0 1-2.204 2.195a2.2 2.2 0 0 1-2.204-2.195a2.2 2.2 0 0 1 2.204-2.196a2.2 2.2 0 0 1 2.204 2.196" />
+              </g>
+            </svg>
+          )}
+        </Link>
+      </nav>
       <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <span className="absolute -right-3 -top-5 rotate-12 text-7xl" aria-hidden>
           🧪
@@ -39,7 +74,9 @@ export default async function HomePage() {
               어떤 실험을 해볼까요?
             </h2>
           </div>
-          <span aria-hidden className="text-3xl">✨</span>
+          <span aria-hidden className="text-3xl">
+            ✨
+          </span>
         </div>
 
         <ServiceCard
@@ -61,15 +98,15 @@ export default async function HomePage() {
           title="우리 쿵짝 실험하기"
         />
         <ServiceCard
-          badge="PHASE 2"
-          description="커플 갈등을 유쾌한 판결문으로 풀어보는 연애 재판소를 준비 중이에요."
+          badge="v2 · NEW"
+          description="사건을 고르거나 직접 만들고, 지인들을 배심원으로 초대해 판결을 받아보세요."
           emoji="⚖️"
-          label="연애 재판소 · 오픈 예정"
+          href="/court"
+          label="사랑의 판결 받기 →"
           theme="mint"
           title="사랑의 판결 받기"
         />
       </section>
-
     </main>
   );
 }

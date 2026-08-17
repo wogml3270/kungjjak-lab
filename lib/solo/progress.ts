@@ -21,14 +21,15 @@ export function readSoloProgress(): SoloProgress | null {
     if (!raw) return null;
 
     const progress = JSON.parse(raw) as Partial<SoloProgress>;
-    const valid = progress.version === 1
-      && Array.isArray(progress.questionIds)
-      && progress.questionIds.length === 24
-      && typeof progress.currentIndex === 'number'
-      && progress.currentIndex >= 0
-      && progress.currentIndex < 24
-      && typeof progress.answers === 'object'
-      && progress.answers !== null;
+    const valid =
+      progress.version === 1 &&
+      Array.isArray(progress.questionIds) &&
+      progress.questionIds.length === 24 &&
+      typeof progress.currentIndex === 'number' &&
+      progress.currentIndex >= 0 &&
+      progress.currentIndex < 24 &&
+      typeof progress.answers === 'object' &&
+      progress.answers !== null;
 
     if (!valid) {
       clearSoloProgress();
