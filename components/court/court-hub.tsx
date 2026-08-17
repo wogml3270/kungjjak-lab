@@ -4,15 +4,18 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import type { CourtCase, CourtTemplate } from '@/lib/court/types';
+import { LoginRequiredLink } from '@/components/auth/login-required-link';
 
 type CourtTab = 'official' | 'custom';
 
 export function CourtHub({
   templates,
   publicCases,
+  signedIn,
 }: {
   templates: CourtTemplate[];
   publicCases: CourtCase[];
+  signedIn: boolean;
 }) {
   const [tab, setTab] = useState<CourtTab>('official');
   const tabs: Array<{ id: CourtTab; label: string; count: number }> = [
@@ -65,9 +68,12 @@ export function CourtHub({
                     <p className="mt-2 text-sm font-semibold leading-6 text-neutral-600">
                       {item.summary}
                     </p>
-                    <p className="mt-3 text-xs font-black">
-                      운영자 공식 사건 · 바로 투표하기 →
-                    </p>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-black">
+                      <span>운영자 공식 사건 · 바로 투표하기 →</span>
+                      <span className="rounded-full border-2 border-black bg-brand-mint px-2.5 py-1 shadow-[2px_2px_0_#000]">
+                        👥 {item.play_count.toLocaleString('ko-KR')}명 참여
+                      </span>
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -106,12 +112,14 @@ export function CourtHub({
               <p className="mt-2 text-sm font-bold">
                 첫 번째 공개 사건의 주인공이 되어 보세요.
               </p>
-              <Link
-                className="neo-button mt-4 inline-flex bg-white"
+              <LoginRequiredLink
+                className="neo-button mt-4 inline-flex items-center justify-center bg-white"
                 href="/court/new"
+                reason="사건을 접수하고 심사 상태를 관리하려면 로그인이 필요해요."
+                signedIn={signedIn}
               >
                 사건 접수하기
-              </Link>
+              </LoginRequiredLink>
             </div>
           )}
         </motion.div>

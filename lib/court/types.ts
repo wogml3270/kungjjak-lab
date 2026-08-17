@@ -10,6 +10,7 @@ export type CourtTemplate = {
   difficulty: string;
   is_featured: boolean;
   play_count: number;
+  created_at: string;
 };
 export type CourtCase = {
   id: string;
@@ -29,3 +30,13 @@ export type CourtCase = {
   created_at: string;
 };
 export type CourtChoice = 'plaintiff' | 'defendant' | 'both';
+
+export type CourtRound = {
+  id: string;
+  round_order: number;
+  round_type: 'briefing' | 'plaintiff' | 'defendant' | 'evidence' | 'verdict';
+  title: string;
+  content: string;
+  emoji: string;
+  evidence_label: string | null;
+};

@@ -23,9 +23,7 @@ export function CourtCreateForm({
     setError('');
     const form = new FormData(event.currentTarget);
     const payload = {
-      template_id: template?.id ?? null,
       creator_user_id: userId,
-      source_type: template ? 'template' : 'custom',
       title: String(form.get('title')).trim(),
       summary: String(form.get('summary')).trim(),
       plaintiff_name: String(form.get('plaintiff_name')).trim(),
@@ -38,11 +36,68 @@ export function CourtCreateForm({
     const { data, error: insertError } = await createClient()
       .from('court_cases')
       .insert(payload)
-      .select('invite_code')
+      .select('id, invite_code')
       .single();
     if (insertError || !data) {
       console.error(insertError);
       setError('재판을 만들지 못했어요. 입력 내용을 확인해 주세요.');
+      setLoading(false);
+      return;
+    }
+    const evidence = String(form.get('evidence') ?? '').trim();
+    const rounds = [
+      {
+        case_id: data.id,
+        round_order: 1,
+        round_type: 'briefing',
+        title: '사건 브리핑',
+        content: payload.summary,
+        emoji: '📢',
+      },
+      {
+        case_id: data.id,
+        round_order: 2,
+        round_type: 'plaintiff',
+        title: `${payload.plaintiff_name}의 진술`,
+        content: payload.plaintiff_claim,
+        emoji: '🙋',
+      },
+      {
+        case_id: data.id,
+        round_order: 3,
+        round_type: 'defendant',
+        title: `${payload.defendant_name}의 반박`,
+        content: payload.defendant_claim,
+        emoji: '🙆',
+      },
+      ...(evidence
+        ? [
+            {
+              case_id: data.id,
+              round_order: 4,
+              round_type: 'evidence',
+              title: '추가 증거',
+              content: evidence,
+              emoji: '🔎',
+              evidence_label: '작성자가 제출한 증거',
+            },
+          ]
+        : []),
+      {
+        case_id: data.id,
+        round_order: 6,
+        round_type: 'verdict',
+        title: '최종 판결',
+        content: '공개된 진술과 증거를 바탕으로 마지막 판단을 내려주세요.',
+        emoji: '⚖️',
+      },
+    ];
+    const { error: roundError } = await createClient()
+      .from('court_rounds')
+      .insert(rounds);
+    if (roundError) {
+      await createClient().from('court_cases').delete().eq('id', data.id);
+      setError('재판 라운드를 구성하지 못했어요. 다시 시도해 주세요.');
       setLoading(false);
       return;
     }
@@ -107,6 +162,13 @@ export function CourtCreateForm({
         minLength={10}
         name="defendant_claim"
       />
+      <Area
+        label="추가 증거 또는 정황 (선택)"
+        maxLength={1000}
+        minLength={5}
+        name="evidence"
+        required={false}
+      />
       {error ? (
         <p className="mt-4 rounded-xl border-2 border-black bg-brand-pink p-3 text-sm font-black">
           {error}
@@ -155,12 +217,14 @@ function Area({
   maxLength,
   minLength,
   name,
+  required = true,
 }: {
   defaultValue?: string;
   label: string;
   maxLength: number;
   minLength: number;
   name: string;
+  required?: boolean;
 }) {
   return (
     <label className="mt-5 block text-sm font-black">
@@ -171,7 +235,7 @@ function Area({
         maxLength={maxLength}
         minLength={minLength}
         name={name}
-        required
+        required={required}
       />
     </label>
   );

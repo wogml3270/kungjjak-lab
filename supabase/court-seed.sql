@@ -12,3 +12,19 @@ insert into public.court_templates (slug, category, title, summary, plaintiff_cl
 ('weekend-alone', '시간', '주말 하루는 혼자 보내겠다는 연인, 유죄일까?', '평일에 만나기 어려운 커플 중 한 사람이 주말의 개인 시간을 요구합니다.', '만날 수 있는 날이 주말뿐인데 혼자 쉬겠다는 건 서운하다.', '건강한 연애를 위해 혼자 회복하는 시간도 필요하다.', '🛋️', '진지하게', false),
 ('ex-photo', '과거', '전 연인 사진을 보관하는 것은 괜찮을까?', '휴대폰과 클라우드에 남아 있는 과거 연애 사진을 발견했습니다.', '현재 연인을 배려한다면 전 연인의 사진은 정리해야 한다.', '과거 기록을 보관하는 것과 미련이 남은 것은 다른 문제다.', '🖼️', '뜨겁게', false)
 on conflict (slug) do update set category=excluded.category, title=excluded.title, summary=excluded.summary, plaintiff_claim=excluded.plaintiff_claim, defendant_claim=excluded.defendant_claim, emoji=excluded.emoji, difficulty=excluded.difficulty, is_featured=excluded.is_featured, is_active=true;
+
+insert into public.court_rounds (template_id, round_order, round_type, title, content, emoji)
+select id, 1, 'briefing', '사건 브리핑', summary, '📢' from public.court_templates
+union all
+select id, 2, 'plaintiff', '원고의 첫 진술', plaintiff_claim, '🙋' from public.court_templates
+union all
+select id, 3, 'defendant', '피고의 반박', defendant_claim, '🙆' from public.court_templates
+union all
+select id, 6, 'verdict', '최종 판결', '지금까지 공개된 진술과 증거를 바탕으로 마지막 판단을 내려주세요.', '⚖️' from public.court_templates;
+
+insert into public.court_rounds (template_id, round_order, round_type, title, content, emoji, evidence_label)
+select id, 4, 'evidence', '증거 1호 · 길드 공지', '길드 일정은 일주일 전에 확정됐고, 불참하면 함께 준비한 팀원 전원이 피해를 보는 상황이었습니다.', '🗓️', '일주일 전 확정된 약속'
+from public.court_templates where slug = 'game-schedule'
+union all
+select id, 5, 'evidence', '증거 2호 · 데이트 요청', '데이트 요청은 사건 당일 오후에 갑자기 전달됐습니다. 다만 두 사람은 최근 2주 동안 제대로 만나지 못했습니다.', '💬', '당일 요청과 2주간의 공백'
+from public.court_templates where slug = 'game-schedule';

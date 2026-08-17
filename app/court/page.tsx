@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { CourtHub } from '@/components/court/court-hub';
 import { createClient } from '@/lib/supabase/server';
 import type { CourtCase, CourtTemplate } from '@/lib/court/types';
+import { LoginRequiredLink } from '@/components/auth/login-required-link';
 
 export const metadata = { title: '사랑의 판결 받기' };
 
@@ -16,7 +17,7 @@ export default async function CourtPage() {
     supabase
       .from('court_templates')
       .select(
-        'id, slug, category, title, summary, plaintiff_claim, defendant_claim, emoji, difficulty, is_featured, play_count',
+        'id, slug, category, title, summary, plaintiff_claim, defendant_claim, emoji, difficulty, is_featured, play_count, created_at',
       )
       .eq('is_active', true)
       .order('is_featured', { ascending: false })
@@ -50,23 +51,34 @@ export default async function CourtPage() {
         <span aria-hidden className="mt-5 block text-6xl">
           ⚖️
         </span>
-        <p className="mt-4 text-xs font-black tracking-widest">
-          LOVE COURT · v2
-        </p>
+        <p className="mt-4 text-xs font-black tracking-widest">LOVE COURT</p>
         <h1 className="mt-2 text-4xl font-black">사랑의 판결 받기</h1>
         <p className="mt-3 font-bold leading-7">
           공식 사건에 바로 투표하거나, 우리만의 사건을 접수해 배심원을 모아
           보세요.
         </p>
-        <Link
-          className="neo-button mt-5 flex items-center justify-center bg-brand-yellow"
-          href="/court/new"
-        >
-          내 사건 접수하기
-        </Link>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <LoginRequiredLink
+            className="neo-button flex items-center justify-center bg-brand-yellow px-2 text-sm"
+            href="/court/new"
+            reason="사용자 지정 사건은 작성자 확인과 검수 상태 관리를 위해 로그인이 필요해요."
+            signedIn={Boolean(authData.user && !authData.user.is_anonymous)}
+          >
+            사건 접수
+          </LoginRequiredLink>
+          <LoginRequiredLink
+            className="neo-button flex items-center justify-center bg-white px-2 text-sm"
+            href="/court/manage"
+            reason="내가 만든 사건을 수정·삭제하고 검수 상태를 관리하려면 로그인이 필요해요."
+            signedIn={Boolean(authData.user && !authData.user.is_anonymous)}
+          >
+            내 사건 관리
+          </LoginRequiredLink>
+        </div>
       </header>
       <CourtHub
         publicCases={(caseData ?? []) as CourtCase[]}
+        signedIn={Boolean(authData.user && !authData.user.is_anonymous)}
         templates={(templateData ?? []) as CourtTemplate[]}
       />
     </main>

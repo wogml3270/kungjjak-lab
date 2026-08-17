@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeProfileImage } from '@/lib/profile-image';
 import { NicknameOnboarding } from '@/components/profile/nickname-onboarding';
+import { LoginRequiredLink } from '@/components/auth/login-required-link';
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -29,10 +30,12 @@ export default async function HomePage() {
             로그인하면 결과를 모아볼 수 있어요
           </span>
         ) : null}
-        <Link
+        <LoginRequiredLink
           aria-label={signedIn ? '마이페이지' : '로그인'}
           className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-white shadow-neo"
-          href={signedIn ? '/mypage' : '/login'}
+          href="/mypage"
+          reason="로그인하면 Solo 결과와 2인 실험 기록, 내 정보를 한곳에서 관리할 수 있어요."
+          signedIn={signedIn}
           title={signedIn ? '마이페이지' : '로그인'}
         >
           {signedIn ? (
@@ -55,7 +58,7 @@ export default async function HomePage() {
               </g>
             </svg>
           )}
-        </Link>
+        </LoginRequiredLink>
       </nav>
       <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <span
@@ -112,7 +115,7 @@ export default async function HomePage() {
           title="우리 쿵짝 실험하기"
         />
         <ServiceCard
-          badge="v2 · NEW"
+          badge="모두의 배심원"
           description="사건을 고르거나 직접 만들고, 지인들을 배심원으로 초대해 판결을 받아보세요."
           emoji="⚖️"
           href="/court"

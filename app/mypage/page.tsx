@@ -49,7 +49,7 @@ export default async function MyPage({
     },
     params,
   ] = await Promise.all([supabase.auth.getUser(), searchParams]);
-  if (!user || user.is_anonymous) redirect('/login');
+  if (!user || user.is_anonymous) redirect('/login?next=/mypage');
 
   const initialTab =
     params.tab === 'solo' || params.tab === 'co-op' ? params.tab : 'profile';

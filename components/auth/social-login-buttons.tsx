@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Provider = 'google' | 'kakao';
 
-export function SocialLoginButtons() {
+export function SocialLoginButtons({ nextPath = '/' }: { nextPath?: string }) {
   const [loading, setLoading] = useState<Provider>();
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -16,7 +16,9 @@ export function SocialLoginButtons() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+      },
     });
 
     if (error) {

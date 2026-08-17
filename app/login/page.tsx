@@ -7,7 +7,16 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const requestedPath = (await searchParams).next;
+  const nextPath =
+    requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
+      ? requestedPath
+      : '/';
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
       <section className="w-full rounded-3xl border-3 border-black bg-brand-mint p-6 shadow-neo-lg">
@@ -21,7 +30,7 @@ export default function LoginPage() {
         <p className="mt-3 text-sm font-semibold leading-6">
           로그인하면 Solo 결과를 날짜별로 모아보고 성향 변화를 확인할 수 있어요.
         </p>
-        <SocialLoginButtons />
+        <SocialLoginButtons nextPath={nextPath} />
         <Link
           className="mt-6 block text-center text-sm font-black underline underline-offset-4"
           href="/"

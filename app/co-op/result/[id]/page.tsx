@@ -11,8 +11,9 @@ export default async function CoOpResultPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.is_anonymous) redirect('/login');
   const { id } = await params;
+  if (!user || user.is_anonymous)
+    redirect(`/login?next=${encodeURIComponent(`/co-op/result/${id}`)}`);
   const { data: report, error: reportError } = await supabase
     .from('reports')
     .select('id, room_id, score, summary, created_at')
