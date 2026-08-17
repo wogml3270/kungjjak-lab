@@ -38,14 +38,12 @@ export function CourtModerationBoard({
       window.alert('검수 결과를 저장하지 못했습니다.');
       return;
     }
-    await supabase
-      .from('moderation_actions')
-      .insert({
-        case_id: item.id,
-        admin_user_id: adminUserId,
-        action: type,
-        reason: reason ?? null,
-      });
+    await supabase.from('moderation_actions').insert({
+      case_id: item.id,
+      admin_user_id: adminUserId,
+      action: type,
+      reason: reason ?? null,
+    });
     setCases((items) =>
       items.map((caseItem) =>
         caseItem.id === item.id
