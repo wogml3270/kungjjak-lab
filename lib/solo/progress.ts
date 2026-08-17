@@ -43,7 +43,9 @@ export function readSoloProgress(): SoloProgress | null {
   }
 }
 
-export function saveSoloProgress(progress: Omit<SoloProgress, 'updatedAt' | 'version'>) {
+export function saveSoloProgress(
+  progress: Omit<SoloProgress, 'updatedAt' | 'version'>,
+) {
   const value: SoloProgress = {
     ...progress,
     updatedAt: new Date().toISOString(),

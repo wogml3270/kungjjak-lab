@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: '로그인', robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: '로그인',
+  robots: { index: false, follow: false },
+};
 
 export default function LoginPage() {
   return (
@@ -11,7 +14,9 @@ export default function LoginPage() {
         <span aria-hidden className="text-6xl">
           🔐
         </span>
-        <p className="mt-5 text-xs font-black tracking-[0.18em]">KUNGJJAK ACCOUNT</p>
+        <p className="mt-5 text-xs font-black tracking-[0.18em]">
+          KUNGJJAK ACCOUNT
+        </p>
         <h1 className="mt-2 text-3xl font-black">검사 기록을 보관해요</h1>
         <p className="mt-3 text-sm font-semibold leading-6">
           로그인하면 Solo 결과를 날짜별로 모아보고 성향 변화를 확인할 수 있어요.

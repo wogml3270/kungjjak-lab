@@ -30,15 +30,43 @@ type Question = {
   positive_trait: string;
   dimension: Dimension;
 };
-type Response = { participant_id: string; question_id: string; score_value: number };
+type Response = {
+  participant_id: string;
+  question_id: string;
+  score_value: number;
+};
 
 const TEST_LENGTH = 24;
 
 const axisDefinitions = [
-  { dimension: 'EI', left: '외향적', leftTrait: 'E', right: '내향적', rightTrait: 'I' },
-  { dimension: 'SN', left: '현실적', leftTrait: 'S', right: '직관적', rightTrait: 'N' },
-  { dimension: 'TF', left: '논리적', leftTrait: 'T', right: '감정적', rightTrait: 'F' },
-  { dimension: 'JP', left: '계획적', leftTrait: 'J', right: '유연한', rightTrait: 'P' },
+  {
+    dimension: 'EI',
+    left: '외향적',
+    leftTrait: 'E',
+    right: '내향적',
+    rightTrait: 'I',
+  },
+  {
+    dimension: 'SN',
+    left: '현실적',
+    leftTrait: 'S',
+    right: '직관적',
+    rightTrait: 'N',
+  },
+  {
+    dimension: 'TF',
+    left: '논리적',
+    leftTrait: 'T',
+    right: '감정적',
+    rightTrait: 'F',
+  },
+  {
+    dimension: 'JP',
+    left: '계획적',
+    leftTrait: 'J',
+    right: '유연한',
+    rightTrait: 'P',
+  },
 ] as const;
 
 function seededRandom(seedText: string) {
@@ -65,7 +93,9 @@ function selectQuestions(bank: Question[], code: string) {
   const traits = ['E', 'I', 'S', 'N', 'T', 'F', 'J', 'P'];
   return shuffle(
     traits.flatMap((trait) =>
-      shuffle(bank.filter((question) => question.positive_trait === trait)).slice(0, 3),
+      shuffle(
+        bank.filter((question) => question.positive_trait === trait),
+      ).slice(0, 3),
     ),
   );
 }
@@ -89,7 +119,9 @@ export function CoOpExperiment({
   const [partnerCompleted, setPartnerCompleted] = useState(false);
   const [responses, setResponses] = useState<Response[]>([]);
   const [error, setError] = useState('');
-  const answerChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const answerChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
+    null,
+  );
 
   const currentIndex = Math.max(0, room.current_question - 1);
   const question = questions[currentIndex];
@@ -136,7 +168,10 @@ export function CoOpExperiment({
     const channel = supabase
       .channel(`room:${room.id}:question:${question.id}`)
       .on('broadcast', { event: 'answer_completed' }, ({ payload }) => {
-        if (payload.participantId !== participant.id && payload.completed === true) {
+        if (
+          payload.participantId !== participant.id &&
+          payload.completed === true
+        ) {
           setPartnerCompleted(true);
           refreshQuestionState(question.id).catch(console.error);
         }
@@ -154,7 +189,12 @@ export function CoOpExperiment({
       .channel(`room:${room.id}:experiment-state`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rooms',
+          filter: `id=eq.${room.id}`,
+        },
         (payload) => setRoom(payload.new as Room),
       )
       .subscribe();
@@ -203,7 +243,10 @@ export function CoOpExperiment({
       return;
     }
     setMyCompleted(true);
-    if (updatedRoom) setRoom((Array.isArray(updatedRoom) ? updatedRoom[0] : updatedRoom) as Room);
+    if (updatedRoom)
+      setRoom(
+        (Array.isArray(updatedRoom) ? updatedRoom[0] : updatedRoom) as Room,
+      );
     await answerChannelRef.current?.send({
       type: 'broadcast',
       event: 'answer_completed',
@@ -223,7 +266,8 @@ export function CoOpExperiment({
     const axisResults = axisDefinitions.map((axis) => {
       const axisPairs = [...byQuestion.entries()].filter(
         ([questionId, values]) =>
-          questionById.get(questionId)?.dimension === axis.dimension && values.length === 2,
+          questionById.get(questionId)?.dimension === axis.dimension &&
+          values.length === 2,
       );
       const difference = axisPairs.reduce(
         (sum, [, values]) => sum + Math.abs(values[0] - values[1]),
@@ -231,18 +275,31 @@ export function CoOpExperiment({
       );
       const chemistry = Math.round((1 - difference / 24) * 100);
       const tendencyScore = axisPairs.reduce((sum, [questionId, values]) => {
-        const direction = questionById.get(questionId)?.positive_trait === axis.leftTrait ? 1 : -1;
+        const direction =
+          questionById.get(questionId)?.positive_trait === axis.leftTrait
+            ? 1
+            : -1;
         return sum + (values[0] + values[1]) * direction;
       }, 0);
       const leftPercent = Math.round(((tendencyScore + 24) / 48) * 100);
-      return { ...axis, chemistry, leftPercent, rightPercent: 100 - leftPercent };
+      return {
+        ...axis,
+        chemistry,
+        leftPercent,
+        rightPercent: 100 - leftPercent,
+      };
     });
     const score = Math.round(
-      axisResults.reduce((sum, axis) => sum + axis.chemistry, 0) / axisResults.length,
+      axisResults.reduce((sum, axis) => sum + axis.chemistry, 0) /
+        axisResults.length,
     );
-    const completedEntries = [...byQuestion.entries()].filter(([, values]) => values.length === 2);
+    const completedEntries = [...byQuestion.entries()].filter(
+      ([, values]) => values.length === 2,
+    );
     const completedPairs = completedEntries.map(([, values]) => values);
-    const exactMatches = completedPairs.filter(([first, second]) => first === second).length;
+    const exactMatches = completedPairs.filter(
+      ([first, second]) => first === second,
+    ).length;
     const closeMatches = completedPairs.filter(
       ([first, second]) => Math.abs(first - second) <= 1,
     ).length;
@@ -264,7 +321,9 @@ export function CoOpExperiment({
           className="w-full min-w-0"
           initial={{ opacity: 0 }}
         >
-          <p className="mb-4 text-xs font-black tracking-widest">EXPERIMENT COMPLETE</p>
+          <p className="mb-4 text-xs font-black tracking-widest">
+            EXPERIMENT COMPLETE
+          </p>
           {responses.length === 48 ? (
             <CoOpResultDisplay
               axisResults={axisResults}
@@ -329,7 +388,9 @@ export function CoOpExperiment({
         </div>
         <div className="mt-3 h-4 overflow-hidden rounded-full border-3 border-black bg-white">
           <motion.div
-            animate={{ width: `${(room.current_question / TEST_LENGTH) * 100}%` }}
+            animate={{
+              width: `${(room.current_question / TEST_LENGTH) * 100}%`,
+            }}
             className="h-full bg-brand-blue"
           />
         </div>
@@ -341,9 +402,17 @@ export function CoOpExperiment({
             exit={{ opacity: 0, x: -30 }}
             initial={{ opacity: 0, x: 30 }}
           >
-            <p className="text-xs font-black text-neutral-500">질문 {room.current_question}</p>
-            <h1 className="mb-8 mt-3 min-h-24 text-2xl font-black leading-9">{question.title}</h1>
-            <LikertScale disabled={myCompleted} onChange={setSelectedValue} value={selectedValue} />
+            <p className="text-xs font-black text-neutral-500">
+              질문 {room.current_question}
+            </p>
+            <h1 className="mb-8 mt-3 min-h-24 text-2xl font-black leading-9">
+              {question.title}
+            </h1>
+            <LikertScale
+              disabled={myCompleted}
+              onChange={setSelectedValue}
+              value={selectedValue}
+            />
             <button
               className="neo-button mt-7 w-full bg-brand-yellow disabled:opacity-40"
               disabled={selectedValue === undefined || myCompleted}
@@ -376,7 +445,15 @@ export function CoOpExperiment({
   );
 }
 
-function ResultStat({ color, label, value }: { color: string; label: string; value: string }) {
+function ResultStat({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: string;
+}) {
   return (
     <div className={`min-w-0 rounded-xl border-2 border-black p-2 ${color}`}>
       <p className="text-lg font-black">{value}</p>

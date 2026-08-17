@@ -68,7 +68,9 @@ export function SoloResumeCard() {
       <div className="flex items-center justify-between gap-3 pr-8">
         <div>
           <p className="text-xs font-black tracking-widest">진행 중인 검사</p>
-          <p className="mt-2 text-xs font-black text-neutral-600">{currentQuestion}번째 질문</p>
+          <p className="mt-2 text-xs font-black text-neutral-600">
+            {currentQuestion}번째 질문
+          </p>
           <h2 className="mt-1 line-clamp-2 text-lg font-black leading-7">
             “{questionTitle || '질문을 불러오는 중…'}”
           </h2>

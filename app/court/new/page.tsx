@@ -39,7 +39,11 @@ export default async function CourtNewPage({
       <Link className="font-black underline" href="/court">
         ← 사건 목록
       </Link>
-      <CourtCreateForm nickname={nickname} template={template} userId={user.id} />
+      <CourtCreateForm
+        nickname={nickname}
+        template={template}
+        userId={user.id}
+      />
     </main>
   );
 }

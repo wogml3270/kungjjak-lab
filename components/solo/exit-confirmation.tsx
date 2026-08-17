@@ -7,7 +7,10 @@ type ExitConfirmationProps = {
   onConfirm: () => void;
 };
 
-export function ExitConfirmation({ onCancel, onConfirm }: ExitConfirmationProps) {
+export function ExitConfirmation({
+  onCancel,
+  onConfirm,
+}: ExitConfirmationProps) {
   return (
     <motion.div
       animate={{ opacity: 1 }}
@@ -34,10 +37,18 @@ export function ExitConfirmation({ onCancel, onConfirm }: ExitConfirmationProps)
           지금까지의 답변은 저장됩니다. 홈에서 언제든 이어서 진행할 수 있어요.
         </p>
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <button className="neo-button bg-white" onClick={onCancel} type="button">
+          <button
+            className="neo-button bg-white"
+            onClick={onCancel}
+            type="button"
+          >
             계속 검사하기
           </button>
-          <button className="neo-button bg-brand-yellow" onClick={onConfirm} type="button">
+          <button
+            className="neo-button bg-brand-yellow"
+            onClick={onConfirm}
+            type="button"
+          >
             나가기
           </button>
         </div>

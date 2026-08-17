@@ -22,8 +22,18 @@ const options: Array<{
     shortLabel: '매우\n그렇다',
     size: 'size-[clamp(2.75rem,14vw,4rem)]',
   },
-  { value: 1, label: '그렇다', shortLabel: '그렇다', size: 'size-[clamp(2.4rem,11.5vw,3.25rem)]' },
-  { value: 0, label: '보통', shortLabel: '보통', size: 'size-[clamp(2rem,9vw,2.5rem)]' },
+  {
+    value: 1,
+    label: '그렇다',
+    shortLabel: '그렇다',
+    size: 'size-[clamp(2.4rem,11.5vw,3.25rem)]',
+  },
+  {
+    value: 0,
+    label: '보통',
+    shortLabel: '보통',
+    size: 'size-[clamp(2rem,9vw,2.5rem)]',
+  },
   {
     value: -1,
     label: '그렇지 않다',
@@ -38,11 +48,20 @@ const options: Array<{
   },
 ];
 
-export function LikertScale({ disabled = false, onChange, value }: LikertScaleProps) {
+export function LikertScale({
+  disabled = false,
+  onChange,
+  value,
+}: LikertScaleProps) {
   return (
     <fieldset className="w-full" disabled={disabled}>
-      <legend className="sr-only">이 문장에 동의하는 정도를 선택해 주세요.</legend>
-      <div className="grid min-w-0 grid-cols-5 items-center gap-0" role="radiogroup">
+      <legend className="sr-only">
+        이 문장에 동의하는 정도를 선택해 주세요.
+      </legend>
+      <div
+        className="grid min-w-0 grid-cols-5 items-center gap-0"
+        role="radiogroup"
+      >
         {options.map((option) => {
           const selected = value === option.value;
           const positive = option.value > 0;
@@ -64,7 +83,9 @@ export function LikertScale({ disabled = false, onChange, value }: LikertScalePr
               <motion.span
                 aria-hidden
                 animate={
-                  selected ? { scale: [1, 1.14, 1], rotate: [0, -3, 0] } : { scale: 1, rotate: 0 }
+                  selected
+                    ? { scale: [1, 1.14, 1], rotate: [0, -3, 0] }
+                    : { scale: 1, rotate: 0 }
                 }
                 className={`${option.size} peer-focus-visible:outline-3 rounded-full border-3 border-black shadow-neo transition-transform peer-checked:translate-x-1 peer-checked:translate-y-1 peer-checked:shadow-none peer-focus-visible:outline peer-focus-visible:outline-offset-4 peer-focus-visible:outline-black ${
                   selected

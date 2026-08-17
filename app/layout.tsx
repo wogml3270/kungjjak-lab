@@ -34,8 +34,16 @@ export const metadata: Metadata = {
     url: '/',
     siteName: '쿵짝랩',
     title: '쿵짝랩 | 우리 둘의 쿵짝, 몇 점일까?',
-    description: '혼자 성향을 발견하고 연인과 함께 쿵짝 스코어를 측정해 보세요.',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: '쿵짝랩 커플 성향 탐구소' }],
+    description:
+      '혼자 성향을 발견하고 연인과 함께 쿵짝 스코어를 측정해 보세요.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: '쿵짝랩 커플 성향 탐구소',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -48,7 +56,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
       <body>
@@ -61,8 +71,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               url: siteUrl,
               applicationCategory: 'LifestyleApplication',
               operatingSystem: 'Any',
-              description: 'Solo 연애 MBTI와 커플 실시간 성향 테스트를 제공하는 모바일 웹 서비스',
-              author: { '@type': 'Person', name: '박재희', url: 'https://j-fe-blog.vercel.app/' },
+              description:
+                'Solo 연애 MBTI와 커플 실시간 성향 테스트를 제공하는 모바일 웹 서비스',
+              author: {
+                '@type': 'Person',
+                name: '박재희',
+                url: 'https://j-fe-blog.vercel.app/',
+              },
             }).replace(/</g, '\\u003c'),
           }}
           type="application/ld+json"

@@ -74,9 +74,21 @@ export function CoOpResultDisplay({
         </motion.p>
         <p className="mt-3 font-black">{scoreSummary(score)}</p>
         <div className="mt-6 grid grid-cols-3 gap-2">
-          <Stat color="bg-brand-yellow" label="완전 일치" value={`${exactMatches}개`} />
-          <Stat color="bg-brand-blue" label="비슷한 답" value={`${closeMatches}개`} />
-          <Stat color="bg-brand-pink" label="강한 공감" value={`${strongMatches}개`} />
+          <Stat
+            color="bg-brand-yellow"
+            label="완전 일치"
+            value={`${exactMatches}개`}
+          />
+          <Stat
+            color="bg-brand-blue"
+            label="비슷한 답"
+            value={`${closeMatches}개`}
+          />
+          <Stat
+            color="bg-brand-pink"
+            label="강한 공감"
+            value={`${strongMatches}개`}
+          />
         </div>
       </section>
       <section className="mt-5 rounded-3xl border-3 border-black bg-white p-5 shadow-neo">
@@ -96,8 +108,14 @@ export function CoOpResultDisplay({
                 </span>
               </div>
               <div className="mt-2 flex h-4 overflow-hidden rounded-full border-2 border-black">
-                <div className="bg-brand-pink" style={{ width: `${axis.leftPercent}%` }} />
-                <div className="bg-brand-blue" style={{ width: `${axis.rightPercent}%` }} />
+                <div
+                  className="bg-brand-pink"
+                  style={{ width: `${axis.leftPercent}%` }}
+                />
+                <div
+                  className="bg-brand-blue"
+                  style={{ width: `${axis.rightPercent}%` }}
+                />
               </div>
               <p className="mt-1 text-right text-[10px] font-black text-neutral-600">
                 이 축의 쿵짝 {axis.chemistry}%
@@ -166,7 +184,15 @@ function CelebrationParticles() {
     </div>
   );
 }
-function Stat({ color, label, value }: { color: string; label: string; value: string }) {
+function Stat({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: string;
+}) {
   return (
     <div className={`rounded-xl border-2 border-black p-2 ${color}`}>
       <p className="text-lg font-black">{value}</p>

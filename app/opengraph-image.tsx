@@ -9,7 +9,10 @@ export const runtime = 'nodejs';
 
 export default async function OpenGraphImage() {
   const font = await readFile(
-    join(process.cwd(), 'node_modules/pretendard/dist/web/static/woff/Pretendard-Bold.woff'),
+    join(
+      process.cwd(),
+      'node_modules/pretendard/dist/web/static/woff/Pretendard-Bold.woff',
+    ),
   );
 
   return new ImageResponse(
@@ -38,8 +41,12 @@ export default async function OpenGraphImage() {
           boxShadow: '18px 18px 0 #000',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', color: '#000' }}>
-          <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: 5 }}>KUNGJJAK LAB</div>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', color: '#000' }}
+        >
+          <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: 5 }}>
+            KUNGJJAK LAB
+          </div>
           <div
             style={{
               display: 'flex',

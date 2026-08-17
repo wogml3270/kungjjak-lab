@@ -3,7 +3,11 @@ import { FormEvent, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
-export function NicknameOnboarding({ suggestedName }: { suggestedName: string }) {
+export function NicknameOnboarding({
+  suggestedName,
+}: {
+  suggestedName: string;
+}) {
   const router = useRouter();
   const [nickname, setNickname] = useState(suggestedName.slice(0, 10));
   const [error, setError] = useState('');
@@ -35,7 +39,9 @@ export function NicknameOnboarding({ suggestedName }: { suggestedName: string })
         <span aria-hidden className="text-5xl">
           👋
         </span>
-        <h2 className="mt-3 text-2xl font-black">쿵짝랩에서 사용할 이름을 정해요</h2>
+        <h2 className="mt-3 text-2xl font-black">
+          쿵짝랩에서 사용할 이름을 정해요
+        </h2>
         <p className="mt-2 text-sm font-bold leading-6">
           2인 실험과 기록에 표시돼요. 설정 후에는 7일에 한 번 바꿀 수 있어요.
         </p>
@@ -48,8 +54,14 @@ export function NicknameOnboarding({ suggestedName }: { suggestedName: string })
           required
           value={nickname}
         />
-        {error ? <p className="mt-2 text-sm font-black text-red-700">{error}</p> : null}
-        <button className="neo-button mt-4 w-full bg-brand-mint" disabled={saving} type="submit">
+        {error ? (
+          <p className="mt-2 text-sm font-black text-red-700">{error}</p>
+        ) : null}
+        <button
+          className="neo-button mt-4 w-full bg-brand-mint"
+          disabled={saving}
+          type="submit"
+        >
           {saving ? '저장 중…' : '이 이름으로 시작하기'}
         </button>
       </motion.form>

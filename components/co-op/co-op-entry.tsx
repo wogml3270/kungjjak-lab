@@ -39,7 +39,12 @@ export function CoOpEntry() {
         setDisplayName(nickname);
         setSignedIn(true);
       } else {
-        setDisplayName((window.localStorage.getItem('kungjjak_co_op_name') ?? '').slice(0, 10));
+        setDisplayName(
+          (window.localStorage.getItem('kungjjak_co_op_name') ?? '').slice(
+            0,
+            10,
+          ),
+        );
       }
       setAuthResolved(true);
     });
@@ -73,26 +78,37 @@ export function CoOpEntry() {
           : nickname;
       const { data: room, error: roomError } = await supabase
         .from('rooms')
-        .insert({ mode: 'co_op', status: 'waiting_for_guest', host_user_id: userId })
+        .insert({
+          mode: 'co_op',
+          status: 'waiting_for_guest',
+          host_user_id: userId,
+        })
         .select('id, code')
         .single();
 
       if (roomError) throw roomError;
 
-      const { error: participantError } = await supabase.from('participants').insert({
-        room_id: room.id,
-        user_id: userId,
-        role: 'host',
-        display_name: playName,
-        avatar_url:
-          user && !user.is_anonymous
-            ? normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture)
-            : '/default-profile.svg',
-        is_ready: true,
-      });
+      const { error: participantError } = await supabase
+        .from('participants')
+        .insert({
+          room_id: room.id,
+          user_id: userId,
+          role: 'host',
+          display_name: playName,
+          avatar_url:
+            user && !user.is_anonymous
+              ? normalizeProfileImage(
+                  user.user_metadata.avatar_url ?? user.user_metadata.picture,
+                )
+              : '/default-profile.svg',
+          is_ready: true,
+        });
 
       if (participantError) throw participantError;
-      window.sessionStorage.setItem(`kungjjak_co_op_name:${room.code}`, playName);
+      window.sessionStorage.setItem(
+        `kungjjak_co_op_name:${room.code}`,
+        playName,
+      );
       router.push(`/co-op/${room.code}`);
     } catch (cause) {
       console.error('[co-op] room creation failed', cause);
@@ -112,7 +128,10 @@ export function CoOpEntry() {
       return;
     }
     window.localStorage.setItem('kungjjak_co_op_name', displayName.trim());
-    window.sessionStorage.setItem(`kungjjak_co_op_name:${roomCode}`, displayName.trim());
+    window.sessionStorage.setItem(
+      `kungjjak_co_op_name:${roomCode}`,
+      displayName.trim(),
+    );
     router.push(`/co-op/${roomCode}`);
   }
 
@@ -131,10 +150,13 @@ export function CoOpEntry() {
         >
           🧬
         </motion.span>
-        <p className="mt-4 text-xs font-black tracking-widest">2-PERSON CO-OP</p>
+        <p className="mt-4 text-xs font-black tracking-widest">
+          2-PERSON CO-OP
+        </p>
         <h1 className="mt-2 text-3xl font-black">우리 쿵짝 실험하기</h1>
         <p className="mt-3 font-semibold leading-7">
-          방을 만들고 딱 한 사람을 초대해 보세요. 두 사람이 모이면 함께 실험을 시작할 수 있어요.
+          방을 만들고 딱 한 사람을 초대해 보세요. 두 사람이 모이면 함께 실험을
+          시작할 수 있어요.
         </p>
         {!authResolved ? (
           <p className="mt-6 rounded-xl border-2 border-black bg-white p-3 text-center text-sm font-black">
@@ -146,11 +168,15 @@ export function CoOpEntry() {
           </div>
         ) : (
           <>
-            <label className="mt-6 block text-sm font-black" htmlFor="display-name">
+            <label
+              className="mt-6 block text-sm font-black"
+              htmlFor="display-name"
+            >
               임시로 사용할 이름
             </label>
             <p className="mt-1 text-xs font-bold">
-              비로그인 참여용 이름이에요. 로그인하면 설정한 닉네임이 자동 적용돼요.
+              비로그인 참여용 이름이에요. 로그인하면 설정한 닉네임이 자동
+              적용돼요.
             </p>
             <input
               className="mt-2 w-full rounded-xl border-3 border-black bg-white px-4 py-3 font-bold shadow-neo"

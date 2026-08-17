@@ -30,7 +30,9 @@ export function NicknameEditor({
     }
     setSavedNickname(data.nickname);
     setNickname(data.nickname);
-    setAvailableAt(new Date(Date.parse(data.changedAt) + 7 * 86400000).toISOString());
+    setAvailableAt(
+      new Date(Date.parse(data.changedAt) + 7 * 86400000).toISOString(),
+    );
     setMessage('닉네임을 저장했어요.');
   }
   return (

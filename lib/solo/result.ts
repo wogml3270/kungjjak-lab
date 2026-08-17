@@ -12,7 +12,10 @@ export type SoloResult = {
 export const SOLO_RESULT_PREFIX = 'kungjjak_solo_result:';
 
 export function saveLocalSoloResult(result: SoloResult) {
-  window.localStorage.setItem(`${SOLO_RESULT_PREFIX}${result.id}`, JSON.stringify(result));
+  window.localStorage.setItem(
+    `${SOLO_RESULT_PREFIX}${result.id}`,
+    JSON.stringify(result),
+  );
 }
 
 export function readLocalSoloResult(id: string): SoloResult | null {

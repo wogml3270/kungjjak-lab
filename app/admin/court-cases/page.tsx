@@ -17,7 +17,12 @@ export default async function CourtAdminPage() {
     .select(
       'id, invite_code, creator_user_id, title, summary, plaintiff_name, defendant_name, plaintiff_claim, defendant_claim, status, visibility, moderation_status, moderation_reason, closes_at, created_at',
     )
-    .in('moderation_status', ['pending_review', 'approved', 'rejected', 'hidden'])
+    .in('moderation_status', [
+      'pending_review',
+      'approved',
+      'rejected',
+      'hidden',
+    ])
     .order('created_at', { ascending: true });
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-5 py-8">
@@ -32,14 +37,19 @@ export default async function CourtAdminPage() {
       <header className="mt-6 rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
         <p className="text-xs font-black tracking-widest">MODERATION DESK</p>
         <h1 className="mt-2 text-3xl font-black">공개 재판 검수</h1>
-        <p className="mt-2 font-bold">공개 신청 사건을 직접 승인하거나 반려합니다.</p>
+        <p className="mt-2 font-bold">
+          공개 신청 사건을 직접 승인하거나 반려합니다.
+        </p>
       </header>
       {error ? (
         <p className="mt-6 rounded-2xl border-3 border-black bg-brand-pink p-4 font-black">
           목록을 불러오지 못했습니다: {error.message}
         </p>
       ) : (
-        <CourtModerationBoard adminUserId={user.id} cases={(data ?? []) as CourtCase[]} />
+        <CourtModerationBoard
+          adminUserId={user.id}
+          cases={(data ?? []) as CourtCase[]}
+        />
       )}
     </main>
   );

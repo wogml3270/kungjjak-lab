@@ -1,5 +1,6 @@
 export type CourtTemplate = {
   id: string;
+  slug: string;
   category: string;
   title: string;
   summary: string;
@@ -8,6 +9,7 @@ export type CourtTemplate = {
   emoji: string;
   difficulty: string;
   is_featured: boolean;
+  play_count: number;
 };
 export type CourtCase = {
   id: string;

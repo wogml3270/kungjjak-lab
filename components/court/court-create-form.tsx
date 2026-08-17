@@ -86,7 +86,12 @@ export function CourtCreateForm({
           minLength={1}
           name="plaintiff_name"
         />
-        <Field label="피고 이름" maxLength={10} minLength={1} name="defendant_name" />
+        <Field
+          label="피고 이름"
+          maxLength={10}
+          minLength={1}
+          name="defendant_name"
+        />
       </div>
       <Area
         defaultValue={template?.plaintiff_claim}

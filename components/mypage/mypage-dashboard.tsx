@@ -72,23 +72,42 @@ export function MyPageDashboard({
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [selectedSolo, setSelectedSolo] = useState<SoloHistory | null>(null);
-  const [selectedResult, setSelectedResult] = useState<CoOpHistory | null>(null);
-  const [visibleSoloHistories, setVisibleSoloHistories] = useState(soloHistories);
-  const [visibleCoOpHistories, setVisibleCoOpHistories] = useState(coOpHistories);
+  const [selectedResult, setSelectedResult] = useState<CoOpHistory | null>(
+    null,
+  );
+  const [visibleSoloHistories, setVisibleSoloHistories] =
+    useState(soloHistories);
+  const [visibleCoOpHistories, setVisibleCoOpHistories] =
+    useState(coOpHistories);
 
   async function deleteSolo(item: SoloHistory) {
-    if (!window.confirm(`${item.mbti} Solo 기록을 삭제할까요? 삭제 후 복구할 수 없어요.`)) return;
-    const { error } = await createClient().from('solo_results').delete().eq('id', item.id);
+    if (
+      !window.confirm(
+        `${item.mbti} Solo 기록을 삭제할까요? 삭제 후 복구할 수 없어요.`,
+      )
+    )
+      return;
+    const { error } = await createClient()
+      .from('solo_results')
+      .delete()
+      .eq('id', item.id);
     if (error) {
       window.alert('기록을 삭제하지 못했어요. 다시 시도해 주세요.');
       return;
     }
-    setVisibleSoloHistories((items) => items.filter(({ id }) => id !== item.id));
+    setVisibleSoloHistories((items) =>
+      items.filter(({ id }) => id !== item.id),
+    );
     if (selectedSolo?.id === item.id) setSelectedSolo(null);
   }
 
   async function deleteCoOp(item: CoOpHistory) {
-    if (!window.confirm(`${item.names.join(' × ')} 기록을 내 목록에서 삭제할까요?`)) return;
+    if (
+      !window.confirm(
+        `${item.names.join(' × ')} 기록을 내 목록에서 삭제할까요?`,
+      )
+    )
+      return;
     const { error } = await createClient()
       .from('participants')
       .update({ history_visible: false })
@@ -97,7 +116,9 @@ export function MyPageDashboard({
       window.alert('기록을 삭제하지 못했어요. 다시 시도해 주세요.');
       return;
     }
-    setVisibleCoOpHistories((items) => items.filter(({ id }) => id !== item.id));
+    setVisibleCoOpHistories((items) =>
+      items.filter(({ id }) => id !== item.id),
+    );
     if (selectedResult?.id === item.id) setSelectedResult(null);
   }
 
@@ -108,7 +129,10 @@ export function MyPageDashboard({
 
   return (
     <>
-      <nav aria-label="마이페이지 메뉴" className="mt-7 grid grid-cols-3 gap-2 text-sm">
+      <nav
+        aria-label="마이페이지 메뉴"
+        className="mt-7 grid grid-cols-3 gap-2 text-sm"
+      >
         {tabs.map((item) => (
           <button
             aria-current={tab === item.value ? 'page' : undefined}
@@ -136,7 +160,11 @@ export function MyPageDashboard({
               transition={{ duration: 1.1 }}
               whileHover={{ scale: 1.06, rotate: 0 }}
             >
-              <img alt="내 프로필" className="size-full object-cover" src={profileImage} />
+              <img
+                alt="내 프로필"
+                className="size-full object-cover"
+                src={profileImage}
+              />
             </motion.div>
             <h2 className="mt-4 text-2xl font-black">{name}</h2>
             <span className="mt-2 inline-flex rounded-full border-2 border-black bg-brand-yellow px-3 py-1 text-xs font-black">
@@ -144,8 +172,16 @@ export function MyPageDashboard({
             </span>
           </div>
           <dl className="grid grid-cols-2 gap-3 p-5 text-sm">
-            <NicknameEditor initialNickname={nickname} nextChangeAt={nextNicknameChangeAt} />
-            <ProfileInfo color="bg-brand-pink" label="이메일" value={email} wide />
+            <NicknameEditor
+              initialNickname={nickname}
+              nextChangeAt={nextNicknameChangeAt}
+            />
+            <ProfileInfo
+              color="bg-brand-pink"
+              label="이메일"
+              value={email}
+              wide
+            />
             <ProfileInfo
               color="bg-brand-blue"
               label="가입한 날"
@@ -221,7 +257,9 @@ export function MyPageDashboard({
                             src={profile.avatarUrl}
                           />
                         </div>
-                        <p className="mt-1 truncate text-xs font-black">{profile.name}</p>
+                        <p className="mt-1 truncate text-xs font-black">
+                          {profile.name}
+                        </p>
                         <span
                           className={`inline-flex rounded-full border border-black px-2 py-0.5 text-[9px] font-black ${profile.role === 'host' ? 'bg-brand-yellow' : 'bg-brand-blue'}`}
                         >
@@ -267,16 +305,19 @@ function clarityProfile(clarity: number) {
   if (clarity >= 60)
     return {
       label: '선명한 성향형',
-      description: '여러 상황에서도 선호하는 방향이 비교적 뚜렷하게 나타났어요.',
+      description:
+        '여러 상황에서도 선호하는 방향이 비교적 뚜렷하게 나타났어요.',
     };
   if (clarity >= 30)
     return {
       label: '상황 적응형',
-      description: '기본 성향은 있지만 사람과 상황에 맞춰 유연하게 반응하는 편이에요.',
+      description:
+        '기본 성향은 있지만 사람과 상황에 맞춰 유연하게 반응하는 편이에요.',
     };
   return {
     label: '균형 탐색형',
-    description: '한쪽 성향에 갇히기보다 서로 다른 방식을 고르게 활용하는 편이에요.',
+    description:
+      '한쪽 성향에 갇히기보다 서로 다른 방식을 고르게 활용하는 편이에요.',
   };
 }
 
@@ -339,9 +380,13 @@ function SoloResultDrawer({
             <section className="mt-5 rounded-3xl border-3 border-black bg-brand-mint p-6 shadow-neo-lg">
               <h2 className="text-5xl font-black">{result.mbti}</h2>
               <div className="mt-4 rounded-2xl border-3 border-black bg-white p-4">
-                <p className="text-xs font-black tracking-wider">나의 성향 표현 스타일</p>
+                <p className="text-xs font-black tracking-wider">
+                  나의 성향 표현 스타일
+                </p>
                 <p className="mt-1 text-xl font-black">{profile.label}</p>
-                <p className="mt-2 text-xs font-semibold leading-5">{profile.description}</p>
+                <p className="mt-2 text-xs font-semibold leading-5">
+                  {profile.description}
+                </p>
               </div>
               <div className="mt-6 space-y-5">
                 {soloAxes.map(({ key, left, right }) => {
@@ -358,8 +403,14 @@ function SoloResultDrawer({
                         </span>
                       </div>
                       <div className="mt-2 flex h-4 overflow-hidden rounded-full border-2 border-black">
-                        <div className="bg-brand-pink" style={{ width: `${leftPercent}%` }} />
-                        <div className="bg-brand-blue" style={{ width: `${100 - leftPercent}%` }} />
+                        <div
+                          className="bg-brand-pink"
+                          style={{ width: `${leftPercent}%` }}
+                        />
+                        <div
+                          className="bg-brand-blue"
+                          style={{ width: `${100 - leftPercent}%` }}
+                        />
                       </div>
                     </div>
                   );
@@ -452,7 +503,9 @@ function ResultDrawer({
 function DateText({ value }: { value: string }) {
   return (
     <p className="mt-1 text-xs font-bold text-neutral-500">
-      {new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))}
+      {new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(
+        new Date(value),
+      )}
     </p>
   );
 }
@@ -501,7 +554,8 @@ function DangerZone({ onDelete }: { onDelete: () => void }) {
   );
 }
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(value),
-  );
+  return new Intl.DateTimeFormat('ko-KR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }

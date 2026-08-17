@@ -55,7 +55,10 @@ export function ServiceCard({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
       >
-        <article aria-disabled="true" className={`${className} cursor-not-allowed opacity-60`}>
+        <article
+          aria-disabled="true"
+          className={`${className} cursor-not-allowed opacity-60`}
+        >
           {content}
         </article>
       </motion.div>

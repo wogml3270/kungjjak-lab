@@ -48,7 +48,9 @@ export function SocialLoginButtons() {
         {loading === 'google' ? 'Google로 이동 중…' : 'Google로 계속하기'}
       </motion.button>
       {errorMessage ? (
-        <p className="text-center text-sm font-bold text-red-700">{errorMessage}</p>
+        <p className="text-center text-sm font-bold text-red-700">
+          {errorMessage}
+        </p>
       ) : null}
     </div>
   );

@@ -67,7 +67,9 @@ function selectBalancedQuestions(questionBank: Question[]) {
   const selected = traitPairs
     .flatMap(([left, right]) => [left, right])
     .flatMap((trait) => {
-      const candidates = questionBank.filter((question) => question.positive_trait === trait);
+      const candidates = questionBank.filter(
+        (question) => question.positive_trait === trait,
+      );
       if (candidates.length < QUESTIONS_PER_TRAIT)
         throw new Error(`${trait} 성향 문항이 부족합니다.`);
       return shuffle(candidates).slice(0, QUESTIONS_PER_TRAIT);
@@ -79,7 +81,8 @@ function calculateResult(answers: Record<string, Answer>) {
   const axisScores = Object.values(answers).reduce<Record<Dimension, number>>(
     (scores, answer) => {
       const dimension = traitPairs.find(
-        ([left, right]) => left === answer.positiveTrait || right === answer.positiveTrait,
+        ([left, right]) =>
+          left === answer.positiveTrait || right === answer.positiveTrait,
       );
       if (!dimension) return scores;
 
@@ -100,14 +103,20 @@ function calculateResult(answers: Record<string, Answer>) {
     mbti: traits.join(''),
     traits,
     confidence: Math.round(
-      (Object.values(axisScores).reduce((sum, score) => sum + Math.abs(score) / 12, 0) / 4) * 100,
+      (Object.values(axisScores).reduce(
+        (sum, score) => sum + Math.abs(score) / 12,
+        0,
+      ) /
+        4) *
+        100,
     ),
     axisScores,
     spectra: traitPairs.map(([left, right]) => {
       const score = axisScores[`${left}${right}` as Dimension];
       const leftPercent = Math.round(((score + 12) / 24) * 100);
       const strength = Math.abs(score);
-      const clarity = strength >= 8 ? '뚜렷함' : strength >= 4 ? '보통' : '유연함';
+      const clarity =
+        strength >= 8 ? '뚜렷함' : strength >= 4 ? '보통' : '유연함';
       return { left, right, leftPercent, clarity };
     }),
   };
@@ -119,9 +128,9 @@ export function SoloQuiz() {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedValue, setSelectedValue] = useState<LikertValue>();
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'analyzing' | 'completed'>(
-    'loading',
-  );
+  const [status, setStatus] = useState<
+    'loading' | 'ready' | 'error' | 'analyzing' | 'completed'
+  >('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
 
@@ -139,10 +148,12 @@ export function SoloQuiz() {
         .order('position');
 
       if (error) throw error;
-      if (!data || data.length < 50) throw new Error('질문 풀이 50개 이상 필요합니다.');
+      if (!data || data.length < 50)
+        throw new Error('질문 풀이 50개 이상 필요합니다.');
 
       const questionBank = data as Question[];
-      const startFresh = new URLSearchParams(window.location.search).get('new') === '1';
+      const startFresh =
+        new URLSearchParams(window.location.search).get('new') === '1';
 
       if (startFresh) {
         clearSoloProgress();
@@ -150,7 +161,9 @@ export function SoloQuiz() {
       }
 
       const savedProgress = startFresh ? null : readSoloProgress();
-      const questionsById = new Map(questionBank.map((item) => [item.id, item]));
+      const questionsById = new Map(
+        questionBank.map((item) => [item.id, item]),
+      );
       const restoredQuestions = savedProgress?.questionIds
         .map((id) => questionsById.get(id))
         .filter((item): item is Question => Boolean(item));
@@ -174,7 +187,9 @@ export function SoloQuiz() {
       setSelectedValue(undefined);
       setStatus('ready');
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : '검사를 준비하지 못했습니다.');
+      setErrorMessage(
+        error instanceof Error ? error.message : '검사를 준비하지 못했습니다.',
+      );
       setStatus('error');
     }
   }, []);
@@ -235,14 +250,19 @@ export function SoloQuiz() {
 
   const result = useMemo(() => calculateResult(answers), [answers]);
   const question = questions[currentIndex];
-  const progress = questions.length ? ((currentIndex + 1) / questions.length) * 100 : 0;
+  const progress = questions.length
+    ? ((currentIndex + 1) / questions.length) * 100
+    : 0;
 
   function submitAnswer() {
     if (!question || selectedValue === undefined) return;
 
     const nextAnswers = {
       ...answers,
-      [question.id]: { positiveTrait: question.positive_trait, value: selectedValue },
+      [question.id]: {
+        positiveTrait: question.positive_trait,
+        value: selectedValue,
+      },
     } satisfies Record<string, Answer>;
     setAnswers(nextAnswers);
 
@@ -281,7 +301,11 @@ export function SoloQuiz() {
 
   if (status === 'error') {
     return (
-      <StatusCard emoji="🥲" title="문항을 불러오지 못했어요" description={errorMessage}>
+      <StatusCard
+        emoji="🥲"
+        title="문항을 불러오지 못했어요"
+        description={errorMessage}
+      >
         <button
           className="neo-button mt-6 w-full bg-brand-yellow"
           onClick={() => void loadQuestions()}
@@ -331,12 +355,18 @@ export function SoloQuiz() {
         className="w-full rounded-3xl border-3 border-black bg-brand-mint p-6 shadow-neo-lg"
         initial={{ opacity: 0, scale: 0.94 }}
       >
-        <p className="text-xs font-black tracking-[0.18em]">EXPERIMENT COMPLETE</p>
+        <p className="text-xs font-black tracking-[0.18em]">
+          EXPERIMENT COMPLETE
+        </p>
         <div className="mt-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-bold">나의 연애 MBTI</p>
-            <h1 className="mt-1 text-5xl font-black tracking-tight">{result.mbti}</h1>
-            <p className="mt-2 text-xs font-black">결과 확신도 {result.confidence}%</p>
+            <h1 className="mt-1 text-5xl font-black tracking-tight">
+              {result.mbti}
+            </h1>
+            <p className="mt-2 text-xs font-black">
+              결과 확신도 {result.confidence}%
+            </p>
           </div>
           <span aria-hidden className="text-6xl">
             🧠
@@ -373,7 +403,11 @@ export function SoloQuiz() {
           </ul>
         </div>
 
-        <button className="neo-button mt-6 w-full bg-brand-yellow" onClick={restart} type="button">
+        <button
+          className="neo-button mt-6 w-full bg-brand-yellow"
+          onClick={restart}
+          type="button"
+        >
           새 질문으로 다시 검사하기
         </button>
         <Link
@@ -432,7 +466,11 @@ export function SoloQuiz() {
             <LikertScale onChange={setSelectedValue} value={selectedValue} />
           </div>
           <motion.button
-            animate={selectedValue === undefined ? { scale: 1 } : { scale: [1, 1.03, 1] }}
+            animate={
+              selectedValue === undefined
+                ? { scale: 1 }
+                : { scale: [1, 1.03, 1] }
+            }
             className="neo-button mt-8 w-full bg-brand-yellow disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-500 disabled:shadow-none"
             disabled={selectedValue === undefined}
             onClick={submitAnswer}
@@ -440,7 +478,9 @@ export function SoloQuiz() {
             whileHover={selectedValue === undefined ? undefined : { y: -2 }}
             whileTap={selectedValue === undefined ? undefined : { scale: 0.97 }}
           >
-            {currentIndex === questions.length - 1 ? '결과 확인하기' : '다음 질문'}
+            {currentIndex === questions.length - 1
+              ? '결과 확인하기'
+              : '다음 질문'}
           </motion.button>
         </motion.article>
       </AnimatePresence>

@@ -23,7 +23,8 @@ async function createOrRestoreAnonymousSession() {
   const { data, error } = await supabase.auth.signInAnonymously();
 
   if (error) throw error;
-  if (!data.session?.user.id) throw new Error('익명 세션을 생성하지 못했습니다.');
+  if (!data.session?.user.id)
+    throw new Error('익명 세션을 생성하지 못했습니다.');
 
   window.localStorage.setItem(ANONYMOUS_USER_ID_KEY, data.session.user.id);
   return data.session.user.id;

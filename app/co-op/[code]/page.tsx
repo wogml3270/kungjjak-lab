@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CoOpRoomPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function CoOpRoomPage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
   const { code } = await params;
   return <CoOpLobby code={code.toUpperCase()} />;
 }

@@ -11,9 +11,13 @@ export async function POST(request: Request) {
   if (!user || user.is_anonymous)
     return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
   const body = await request.json().catch(() => null);
-  const nickname = typeof body?.nickname === 'string' ? body.nickname.trim() : '';
+  const nickname =
+    typeof body?.nickname === 'string' ? body.nickname.trim() : '';
   if (!nickname || nickname.length > 10)
-    return NextResponse.json({ error: '닉네임은 1~10자로 입력해 주세요.' }, { status: 400 });
+    return NextResponse.json(
+      { error: '닉네임은 1~10자로 입력해 주세요.' },
+      { status: 400 },
+    );
   const changedAt =
     typeof user.user_metadata.nickname_changed_at === 'string'
       ? Date.parse(user.user_metadata.nickname_changed_at)
@@ -31,7 +35,10 @@ export async function POST(request: Request) {
   });
   if (error) {
     console.error('[profile] nickname update failed', error);
-    return NextResponse.json({ error: '닉네임을 저장하지 못했어요.' }, { status: 500 });
+    return NextResponse.json(
+      { error: '닉네임을 저장하지 못했어요.' },
+      { status: 500 },
+    );
   }
   return NextResponse.json({ nickname, changedAt: now });
 }

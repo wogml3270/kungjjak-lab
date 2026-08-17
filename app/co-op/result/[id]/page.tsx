@@ -2,7 +2,11 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-export default async function CoOpResultPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CoOpResultPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,7 +18,8 @@ export default async function CoOpResultPage({ params }: { params: Promise<{ id:
     .select('id, room_id, score, summary, created_at')
     .eq('id', id)
     .maybeSingle();
-  if (reportError) console.error('[co-op result] report query failed', reportError);
+  if (reportError)
+    console.error('[co-op result] report query failed', reportError);
   const roomId = report?.room_id ?? id;
   if (!report) {
     const { data: room } = await supabase
@@ -30,10 +35,15 @@ export default async function CoOpResultPage({ params }: { params: Promise<{ id:
     { data: responses, error: responseError },
   ] = await Promise.all([
     supabase.from('participants').select('display_name').eq('room_id', roomId),
-    supabase.from('responses').select('question_id, score_value').eq('room_id', roomId),
+    supabase
+      .from('responses')
+      .select('question_id, score_value')
+      .eq('room_id', roomId),
   ]);
-  if (participantError) console.error('[co-op result] participant query failed', participantError);
-  if (responseError) console.error('[co-op result] response query failed', responseError);
+  if (participantError)
+    console.error('[co-op result] participant query failed', participantError);
+  if (responseError)
+    console.error('[co-op result] response query failed', responseError);
   const names = (participants ?? [])
     .map(({ display_name }) => display_name)
     .filter((value): value is string => Boolean(value));
@@ -43,8 +53,13 @@ export default async function CoOpResultPage({ params }: { params: Promise<{ id:
       ...(byQuestion.get(response.question_id) ?? []),
       response.score_value,
     ]);
-  const pairs = [...byQuestion.values()].filter((values) => values.length === 2);
-  const difference = pairs.reduce((sum, values) => sum + Math.abs(values[0] - values[1]), 0);
+  const pairs = [...byQuestion.values()].filter(
+    (values) => values.length === 2,
+  );
+  const difference = pairs.reduce(
+    (sum, values) => sum + Math.abs(values[0] - values[1]),
+    0,
+  );
   const score = report
     ? Number(report.score)
     : pairs.length === 24

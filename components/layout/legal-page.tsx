@@ -1,6 +1,12 @@
 import Link from 'next/link';
 
-export function LegalPage({ children, title }: { children: React.ReactNode; title: string }) {
+export function LegalPage({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) {
   return (
     <main className="mx-auto min-h-screen max-w-md px-5 py-8">
       <Link className="font-black underline underline-offset-4" href="/">
@@ -9,8 +15,12 @@ export function LegalPage({ children, title }: { children: React.ReactNode; titl
       <article className="mt-6 rounded-3xl border-3 border-black bg-white p-6 shadow-neo-lg">
         <p className="text-xs font-black tracking-widest">KUNGJJAK LAB</p>
         <h1 className="mt-2 text-3xl font-black">{title}</h1>
-        <p className="mt-2 text-xs font-bold text-neutral-500">시행일: 2026년 8월 14일</p>
-        <div className="mt-7 space-y-6 text-sm font-semibold leading-7">{children}</div>
+        <p className="mt-2 text-xs font-bold text-neutral-500">
+          시행일: 2026년 8월 14일
+        </p>
+        <div className="mt-7 space-y-6 text-sm font-semibold leading-7">
+          {children}
+        </div>
       </article>
     </main>
   );

@@ -22,7 +22,11 @@ export function CourtModerationBoard({
   const [tab, setTab] = useState<string>('pending_review');
   const [selected, setSelected] = useState<CourtCase | null>(null);
   const visible = cases.filter((item) => item.moderation_status === tab);
-  async function action(item: CourtCase, type: 'approve' | 'reject' | 'hide', reason?: string) {
+  async function action(
+    item: CourtCase,
+    type: 'approve' | 'reject' | 'hide',
+    reason?: string,
+  ) {
     const next =
       type === 'approve'
         ? { moderation_status: 'approved', visibility: 'public' }
@@ -64,7 +68,10 @@ export function CourtModerationBoard({
             type="button"
           >
             {labels[item]}{' '}
-            {cases.filter((courtCase) => courtCase.moderation_status === item).length}
+            {
+              cases.filter((courtCase) => courtCase.moderation_status === item)
+                .length
+            }
           </button>
         ))}
       </nav>
@@ -82,11 +89,15 @@ export function CourtModerationBoard({
                   #{item.invite_code}
                 </span>
                 <time className="text-xs font-bold text-neutral-500">
-                  {new Intl.DateTimeFormat('ko-KR').format(new Date(item.created_at))}
+                  {new Intl.DateTimeFormat('ko-KR').format(
+                    new Date(item.created_at),
+                  )}
                 </time>
               </div>
               <h2 className="mt-3 text-lg font-black">{item.title}</h2>
-              <p className="mt-2 line-clamp-2 text-sm font-semibold">{item.summary}</p>
+              <p className="mt-2 line-clamp-2 text-sm font-semibold">
+                {item.summary}
+              </p>
             </button>
           ))
         ) : (
@@ -112,7 +123,9 @@ export function CourtModerationBoard({
               onClick={(event) => event.stopPropagation()}
             >
               <div className="flex justify-between">
-                <p className="text-xs font-black tracking-widest">CASE REVIEW</p>
+                <p className="text-xs font-black tracking-widest">
+                  CASE REVIEW
+                </p>
                 <button
                   className="size-10 rounded-full border-2 border-black bg-white text-xl font-black"
                   onClick={() => setSelected(null)}
@@ -147,7 +160,8 @@ export function CourtModerationBoard({
                   <button
                     className="neo-button w-full bg-brand-pink"
                     onClick={() => {
-                      const reason = window.prompt('반려 사유를 입력해 주세요.');
+                      const reason =
+                        window.prompt('반려 사유를 입력해 주세요.');
                       if (reason) void action(selected, 'reject', reason);
                     }}
                     type="button"
@@ -171,7 +185,15 @@ export function CourtModerationBoard({
     </>
   );
 }
-function ReviewClaim({ color, label, text }: { color: string; label: string; text: string }) {
+function ReviewClaim({
+  color,
+  label,
+  text,
+}: {
+  color: string;
+  label: string;
+  text: string;
+}) {
   return (
     <section className={`mt-4 rounded-2xl border-3 border-black p-4 ${color}`}>
       <h3 className="font-black">{label}</h3>

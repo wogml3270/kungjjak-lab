@@ -57,7 +57,9 @@ export function CoOpLobby({ code }: { code: string }) {
   useEffect(() => {
     let active = true;
     async function resolveName() {
-      const recentName = (window.localStorage.getItem('kungjjak_co_op_name') ?? '').slice(0, 10);
+      const recentName = (
+        window.localStorage.getItem('kungjjak_co_op_name') ?? ''
+      ).slice(0, 10);
       setSuggestedName(recentName);
       const {
         data: { user },
@@ -75,7 +77,9 @@ export function CoOpLobby({ code }: { code: string }) {
             .slice(0, 10),
         );
       } else {
-        setDisplayName(window.sessionStorage.getItem(`kungjjak_co_op_name:${code}`));
+        setDisplayName(
+          window.sessionStorage.getItem(`kungjjak_co_op_name:${code}`),
+        );
       }
     }
     resolveName();
@@ -118,7 +122,9 @@ export function CoOpLobby({ code }: { code: string }) {
             : displayName;
         const avatarUrl =
           user && !user.is_anonymous
-            ? normalizeProfileImage(user.user_metadata.avatar_url ?? user.user_metadata.picture)
+            ? normalizeProfileImage(
+                user.user_metadata.avatar_url ?? user.user_metadata.picture,
+              )
             : '/default-profile.svg';
         if (!active) return;
         setUserId(currentUserId);
@@ -130,9 +136,12 @@ export function CoOpLobby({ code }: { code: string }) {
           .maybeSingle();
 
         if (!foundRoom) {
-          const { data: joined, error: joinError } = await supabase.rpc('join_room', {
-            room_code: code,
-          });
+          const { data: joined, error: joinError } = await supabase.rpc(
+            'join_room',
+            {
+              room_code: code,
+            },
+          );
           if (joinError) throw joinError;
           const participant = Array.isArray(joined) ? joined[0] : joined;
           await supabase
@@ -186,14 +195,22 @@ export function CoOpLobby({ code }: { code: string }) {
       .channel(`room:${room.id}:lobby`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'participants', filter: `room_id=eq.${room.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'participants',
+          filter: `room_id=eq.${room.id}`,
+        },
         () => {
           loadParticipants(room.id).catch(console.error);
         },
       )
       .subscribe();
 
-    const fallback = window.setInterval(() => loadParticipants(room.id).catch(console.error), 4000);
+    const fallback = window.setInterval(
+      () => loadParticipants(room.id).catch(console.error),
+      4000,
+    );
     return () => {
       window.clearInterval(fallback);
       supabase.removeChannel(channel);
@@ -206,18 +223,30 @@ export function CoOpLobby({ code }: { code: string }) {
       .channel(`room:${room.id}:state`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rooms',
+          filter: `id=eq.${room.id}`,
+        },
         (payload) => {
           setRoom(payload.new as Room);
         },
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'rooms', filter: `id=eq.${room.id}` },
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'rooms',
+          filter: `id=eq.${room.id}`,
+        },
         () => {
           setRoom(null);
           setParticipants([]);
-          setError('상대방이 나가서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.');
+          setError(
+            '상대방이 나가서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.',
+          );
         },
       )
       .subscribe();
@@ -227,7 +256,13 @@ export function CoOpLobby({ code }: { code: string }) {
   }, [room?.id, supabase]);
 
   useEffect(() => {
-    if (!room || !userId || room.status === 'completed' || room.status === 'expired') return;
+    if (
+      !room ||
+      !userId ||
+      room.status === 'completed' ||
+      room.status === 'expired'
+    )
+      return;
     const activeRoomId = room.id;
     let disconnectTimer: number | undefined;
     const presenceChannel = supabase.channel(`room:${activeRoomId}:presence`, {
@@ -235,7 +270,9 @@ export function CoOpLobby({ code }: { code: string }) {
     });
 
     function checkPresence() {
-      const connectedUsers = Object.keys(presenceChannel.presenceState()).length;
+      const connectedUsers = Object.keys(
+        presenceChannel.presenceState(),
+      ).length;
       if (connectedUsers >= 2) {
         roomWasFullRef.current = true;
         presenceClosureStartedRef.current = false;
@@ -259,19 +296,23 @@ export function CoOpLobby({ code }: { code: string }) {
         else {
           setRoom(null);
           setParticipants([]);
-          setError('상대방의 연결이 끊겨서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.');
+          setError(
+            '상대방의 연결이 끊겨서 이 방이 종료됐어요. 새로운 방을 만들어 주세요.',
+          );
         }
       }, 5000);
     }
 
-    presenceChannel.on('presence', { event: 'sync' }, checkPresence).subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await presenceChannel.track({
-          participantId: userId,
-          connectedAt: new Date().toISOString(),
-        });
-      }
-    });
+    presenceChannel
+      .on('presence', { event: 'sync' }, checkPresence)
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({
+            participantId: userId,
+            connectedAt: new Date().toISOString(),
+          });
+        }
+      });
 
     return () => {
       if (disconnectTimer) window.clearTimeout(disconnectTimer);
@@ -279,7 +320,10 @@ export function CoOpLobby({ code }: { code: string }) {
     };
   }, [room?.id, room?.status, supabase, userId]);
 
-  const inviteUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/co-op/${code}`;
+  const inviteUrl =
+    typeof window === 'undefined'
+      ? ''
+      : `${window.location.origin}/co-op/${code}`;
   const isHost = room?.host_user_id === userId;
   const isFull = participants.length === 2;
 
@@ -304,7 +348,9 @@ export function CoOpLobby({ code }: { code: string }) {
   async function shareToKakao() {
     const javascriptKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
     if (!javascriptKey) {
-      setMessage('카카오 JavaScript 키 설정이 필요해요. 일반 공유를 이용해 주세요.');
+      setMessage(
+        '카카오 JavaScript 키 설정이 필요해요. 일반 공유를 이용해 주세요.',
+      );
       return;
     }
 
@@ -320,7 +366,10 @@ export function CoOpLobby({ code }: { code: string }) {
           link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl },
         },
         buttons: [
-          { title: '2인 쿵짝 실험 참여하기', link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl } },
+          {
+            title: '2인 쿵짝 실험 참여하기',
+            link: { mobileWebUrl: inviteUrl, webUrl: inviteUrl },
+          },
         ],
       });
     } catch (cause) {
@@ -341,15 +390,25 @@ export function CoOpLobby({ code }: { code: string }) {
   }
 
   async function leaveRoom() {
-    if (!room || !window.confirm('방을 나가면 두 사람의 진행 중인 방이 종료돼요. 나갈까요?'))
+    if (
+      !room ||
+      !window.confirm(
+        '방을 나가면 두 사람의 진행 중인 방이 종료돼요. 나갈까요?',
+      )
+    )
       return;
     await supabase.rpc('leave_co_op_room', { target_room_id: room.id });
     window.sessionStorage.removeItem(`kungjjak_co_op_name:${code}`);
     router.replace('/co-op');
   }
 
-  if (room && ['in_progress', 'calculating', 'completed'].includes(room.status)) {
-    const me = participants.find((participant) => participant.user_id === userId);
+  if (
+    room &&
+    ['in_progress', 'calculating', 'completed'].includes(room.status)
+  ) {
+    const me = participants.find(
+      (participant) => participant.user_id === userId,
+    );
     if (me)
       return (
         <CoOpExperiment
@@ -372,7 +431,10 @@ export function CoOpLobby({ code }: { code: string }) {
             const name = String(form.get('name') ?? '').trim();
             if (name && name.length <= 10) {
               window.localStorage.setItem('kungjjak_co_op_name', name);
-              window.sessionStorage.setItem(`kungjjak_co_op_name:${code}`, name);
+              window.sessionStorage.setItem(
+                `kungjjak_co_op_name:${code}`,
+                name,
+              );
               setDisplayName(name);
             }
           }}
@@ -380,7 +442,8 @@ export function CoOpLobby({ code }: { code: string }) {
           <p className="text-xs font-black tracking-widest">GUEST NAME</p>
           <h1 className="mt-2 text-2xl font-black">임시 이름을 정해 주세요</h1>
           <p className="mt-2 text-sm font-semibold">
-            비로그인 참여에만 사용하는 이름이에요. 로그인하면 서비스 닉네임이 자동으로 적용돼요.
+            비로그인 참여에만 사용하는 이름이에요. 로그인하면 서비스 닉네임이
+            자동으로 적용돼요.
           </p>
           <input
             autoFocus
@@ -391,7 +454,10 @@ export function CoOpLobby({ code }: { code: string }) {
             placeholder="예: 재희 (최대 10자)"
             required
           />
-          <button className="neo-button mt-4 w-full bg-brand-mint" type="submit">
+          <button
+            className="neo-button mt-4 w-full bg-brand-mint"
+            type="submit"
+          >
             이 이름으로 입장하기
           </button>
         </form>
@@ -431,7 +497,10 @@ export function CoOpLobby({ code }: { code: string }) {
             <p className="font-black" role="alert">
               {error}
             </p>
-            <Link className="neo-button mt-4 inline-flex items-center bg-white" href="/co-op">
+            <Link
+              className="neo-button mt-4 inline-flex items-center bg-white"
+              href="/co-op"
+            >
               다른 방 찾기
             </Link>
           </div>
@@ -458,7 +527,11 @@ export function CoOpLobby({ code }: { code: string }) {
                     initial={{ opacity: 0, y: 12 }}
                   >
                     <span aria-hidden className="text-3xl">
-                      {participant ? (participant.user_id === userId ? '🙋' : '🙌') : '⏳'}
+                      {participant
+                        ? participant.user_id === userId
+                          ? '🙋'
+                          : '🙌'
+                        : '⏳'}
                     </span>
                     <p className="mt-2 text-sm font-black">
                       {participant
@@ -529,7 +602,8 @@ export function CoOpLobby({ code }: { code: string }) {
               </p>
             ) : null}
             <p className="mt-4 rounded-xl border-2 border-black bg-brand-mint p-3 text-center text-xs font-bold">
-              비로그인 참여도 가능하지만, 로그인해야 완료 기록을 마이페이지에서 다시 볼 수 있어요.
+              비로그인 참여도 가능하지만, 로그인해야 완료 기록을 마이페이지에서
+              다시 볼 수 있어요.
             </p>
           </>
         )}
@@ -569,8 +643,11 @@ function loadKakaoSdk() {
     script.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js';
     script.crossOrigin = 'anonymous';
     script.onload = () =>
-      window.Kakao ? resolve(window.Kakao) : reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
-    script.onerror = () => reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
+      window.Kakao
+        ? resolve(window.Kakao)
+        : reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
+    script.onerror = () =>
+      reject(new Error('Kakao SDK를 불러오지 못했습니다.'));
     document.head.appendChild(script);
   });
   return kakaoSdkPromise;

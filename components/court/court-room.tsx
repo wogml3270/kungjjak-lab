@@ -42,7 +42,9 @@ export function CourtRoom({ code }: { code: string }) {
   const [userId, setUserId] = useState('');
   const [signedIn, setSignedIn] = useState(false);
   const [myChoice, setMyChoice] = useState<CourtChoice>();
-  const [votes, setVotes] = useState<Array<{ choice: CourtChoice; opinion: string | null }>>([]);
+  const [votes, setVotes] = useState<
+    Array<{ choice: CourtChoice; opinion: string | null }>
+  >([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const load = useCallback(async () => {
@@ -73,10 +75,18 @@ export function CourtRoom({ code }: { code: string }) {
           .eq('case_id', data.id)
           .eq('voter_user_id', uid)
           .maybeSingle(),
-        supabase.from('court_votes').select('choice, opinion').eq('case_id', data.id),
+        supabase
+          .from('court_votes')
+          .select('choice, opinion')
+          .eq('case_id', data.id),
       ]);
       setMyChoice(ownVote?.choice as CourtChoice | undefined);
-      setVotes((visibleVotes ?? []) as Array<{ choice: CourtChoice; opinion: string | null }>);
+      setVotes(
+        (visibleVotes ?? []) as Array<{
+          choice: CourtChoice;
+          opinion: string | null;
+        }>,
+      );
     } catch (cause) {
       console.error(cause);
       setError('재판 기록을 불러오지 못했어요.');
@@ -91,12 +101,17 @@ export function CourtRoom({ code }: { code: string }) {
     const form = new FormData(event.currentTarget);
     const choice = String(form.get('choice')) as CourtChoice;
     const opinion = String(form.get('opinion') ?? '').trim() || null;
-    const { error: voteError } = await supabase
-      .from('court_votes')
-      .insert({ case_id: courtCase.id, voter_user_id: userId, choice, opinion });
+    const { error: voteError } = await supabase.from('court_votes').insert({
+      case_id: courtCase.id,
+      voter_user_id: userId,
+      choice,
+      opinion,
+    });
     if (voteError) {
       setError(
-        voteError.code === '23505' ? '이미 이 사건에 투표했어요.' : '투표를 저장하지 못했어요.',
+        voteError.code === '23505'
+          ? '이미 이 사건에 투표했어요.'
+          : '투표를 저장하지 못했어요.',
       );
       return;
     }
@@ -130,7 +145,8 @@ export function CourtRoom({ code }: { code: string }) {
       setMessage('초대 링크를 복사했어요.');
     }
   }
-  if (courtCase === undefined) return <Shell text="사건 기록을 펼치고 있어요…" />;
+  if (courtCase === undefined)
+    return <Shell text="사건 기록을 펼치고 있어요…" />;
   if (!courtCase) return <Shell text="존재하지 않거나 비공개된 사건이에요." />;
   const isOwner = courtCase.creator_user_id === userId;
   const counts = choices.map((choice) => ({
@@ -158,9 +174,13 @@ export function CourtRoom({ code }: { code: string }) {
         className="mt-6 rounded-3xl border-3 border-black bg-brand-pink p-6 shadow-neo-lg"
         initial={{ opacity: 0, y: 20 }}
       >
-        <p className="text-xs font-black tracking-widest">CASE #{courtCase.invite_code}</p>
+        <p className="text-xs font-black tracking-widest">
+          CASE #{courtCase.invite_code}
+        </p>
         <span className="mt-3 block text-5xl">⚖️</span>
-        <h1 className="mt-3 text-3xl font-black leading-tight">{courtCase.title}</h1>
+        <h1 className="mt-3 text-3xl font-black leading-tight">
+          {courtCase.title}
+        </h1>
         <p className="mt-3 font-semibold leading-7">{courtCase.summary}</p>
         <div className="mt-5 flex flex-wrap gap-2 text-[10px] font-black">
           <span className="rounded-full border-2 border-black bg-white px-3 py-1">
@@ -218,7 +238,10 @@ export function CourtRoom({ code }: { code: string }) {
               name="opinion"
             />
           </label>
-          <button className="neo-button mt-4 w-full bg-brand-yellow" type="submit">
+          <button
+            className="neo-button mt-4 w-full bg-brand-yellow"
+            type="submit"
+          >
             판결에 한 표 던지기
           </button>
         </form>
@@ -244,12 +267,15 @@ export function CourtRoom({ code }: { code: string }) {
                 <div className="flex justify-between text-sm font-black">
                   <span>{item.label}</span>
                   <span>
-                    {total ? Math.round((item.count / total) * 100) : 0}% · {item.count}표
+                    {total ? Math.round((item.count / total) * 100) : 0}% ·{' '}
+                    {item.count}표
                   </span>
                 </div>
                 <div className="mt-1 h-5 overflow-hidden rounded-full border-2 border-black bg-neutral-100">
                   <motion.div
-                    animate={{ width: `${total ? (item.count / total) * 100 : 0}%` }}
+                    animate={{
+                      width: `${total ? (item.count / total) * 100 : 0}%`,
+                    }}
                     className={`h-full ${item.color}`}
                   />
                 </div>
@@ -265,7 +291,9 @@ export function CourtRoom({ code }: { code: string }) {
             {courtCase.status === 'voting' ? (
               <button
                 className="neo-button bg-white"
-                onClick={() => updateCase({ status: 'completed' }, '최종 판결을 확정했어요.')}
+                onClick={() =>
+                  updateCase({ status: 'completed' }, '최종 판결을 확정했어요.')
+                }
                 type="button"
               >
                 투표 종료하고 판결 확정
@@ -305,9 +333,19 @@ export function CourtRoom({ code }: { code: string }) {
     </main>
   );
 }
-function Claim({ color, text, title }: { color: string; text: string; title: string }) {
+function Claim({
+  color,
+  text,
+  title,
+}: {
+  color: string;
+  text: string;
+  title: string;
+}) {
   return (
-    <article className={`min-w-0 rounded-2xl border-3 border-black p-4 shadow-neo ${color}`}>
+    <article
+      className={`min-w-0 rounded-2xl border-3 border-black p-4 shadow-neo ${color}`}
+    >
       <h2 className="font-black">{title}</h2>
       <p className="mt-3 break-words text-sm font-semibold leading-6">{text}</p>
     </article>

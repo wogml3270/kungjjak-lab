@@ -11,13 +11,16 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
   const signedIn = Boolean(user && !user.is_anonymous);
-  const profileImageCandidate = user?.user_metadata.avatar_url ?? user?.user_metadata.picture;
+  const profileImageCandidate =
+    user?.user_metadata.avatar_url ?? user?.user_metadata.picture;
   const profileImage = normalizeProfileImage(profileImageCandidate);
   return (
     <main className="mx-auto min-h-screen max-w-md px-5 pb-12 pt-8">
       {signedIn && !user?.user_metadata.service_nickname ? (
         <NicknameOnboarding
-          suggestedName={String(user?.user_metadata.full_name ?? user?.user_metadata.name ?? '')}
+          suggestedName={String(
+            user?.user_metadata.full_name ?? user?.user_metadata.name ?? '',
+          )}
         />
       ) : null}
       <nav className="mb-5 flex items-center justify-end gap-3">
@@ -33,7 +36,11 @@ export default async function HomePage() {
           title={signedIn ? '마이페이지' : '로그인'}
         >
           {signedIn ? (
-            <img alt="내 프로필" className="size-full object-cover" src={profileImage} />
+            <img
+              alt="내 프로필"
+              className="size-full object-cover"
+              src={profileImage}
+            />
           ) : (
             <svg aria-hidden="true" className="size-7" viewBox="0 0 24 24">
               <path d="M0 0h24v24H0z" fill="none" />
@@ -51,10 +58,15 @@ export default async function HomePage() {
         </Link>
       </nav>
       <header className="relative overflow-hidden rounded-3xl border-3 border-black bg-brand-yellow p-6 shadow-neo-lg">
-        <span className="absolute -right-3 -top-5 rotate-12 text-7xl" aria-hidden>
+        <span
+          className="absolute -right-3 -top-5 rotate-12 text-7xl"
+          aria-hidden
+        >
           🧪
         </span>
-        <p className="relative text-sm font-black tracking-[0.18em]">KUNGJJAK LAB</p>
+        <p className="relative text-sm font-black tracking-[0.18em]">
+          KUNGJJAK LAB
+        </p>
         <h1 className="relative mt-3 max-w-[270px] text-4xl font-black leading-tight tracking-[-0.04em]">
           우리 둘의 쿵짝,
           <br />몇 점일까?
@@ -69,7 +81,9 @@ export default async function HomePage() {
       <section aria-labelledby="services-title" className="mt-9 space-y-6">
         <div className="flex items-end justify-between px-1">
           <div>
-            <p className="text-xs font-black text-neutral-600">TODAY'S EXPERIMENT</p>
+            <p className="text-xs font-black text-neutral-600">
+              TODAY'S EXPERIMENT
+            </p>
             <h2 className="mt-1 text-2xl font-black" id="services-title">
               어떤 실험을 해볼까요?
             </h2>
